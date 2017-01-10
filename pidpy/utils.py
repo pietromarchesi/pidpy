@@ -38,9 +38,9 @@ def feature_values(X):
     # discrete feature values.
     nvals = len(set(X.reshape([X.shape[0] * X.shape[1], ])))
 
-def map(X, nvals):
+def map_array(X, binary = True):
     # maps X using
-    if nvals == 2:
+    if binary:
         usemap = map_binary
     else:
         usemap = map_nonbinary
@@ -52,48 +52,11 @@ def map(X, nvals):
     return mapped
 
 
-
-
-def mutual_info_from_joint(joint):
-    px, py = joint.sum(axis=0), joint.sum(axis=1)
-    I = 0
-    for i in range(py.shape[0]):
-        for j in range(px.shape[0]):
-            if abs(joint[i,j]) > 10**(-8):
-                I += joint[i,j] * np.log2(joint[i,j]/ float(py[i]*px[j]))
-    return I
-
-
-def conditional_probability_from_joint(joint):
-    px, py = marginals_from_joint(joint)
-    pxy = joint.astype(float) / py[:, np.newaxis]
-    pyx = joint.astype(float) / px[np.newaxis, :]
-    return pxy, pyx
-
-
-def specific_info_from_joint(joint):
-    Ispec = np.zeros(joint.shape[0])
-    cond_as, cond_sa = conditional_probability_from_joint(joint)
-
-    for s in xrange(joint.shape[0]):
-        for a in xrange(joint.shape[1]):
-            ps = joint.sum(axis = 1)[s]
-            contribution = cond_as[s,a] * (np.log2(1.0 / ps) - np.log2(1.0 / cond_sa[s,a]))
-            if np.isnan(contribution):
-                contribution = 0
-            Ispec[s] += contribution
-    return Ispec
-
-
-
-
 def group_without_unit(group, unit):
     """ Returns the tuple given by group without the element give by unit. """
     if isinstance(unit, int):
         unit = [unit]
     return tuple(k for k in group if not k in unit)
-
-
 
 
 def lazy_property(fn):

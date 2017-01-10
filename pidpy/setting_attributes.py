@@ -225,3 +225,4 @@ class Test(object):
 t = Test()
 t.a
 t.a
+

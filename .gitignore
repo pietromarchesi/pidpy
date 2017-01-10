@@ -6,6 +6,7 @@
 
 # My files #
 ############
+pidpy/generators.py
 parallel_example.py
 profiling.py
 sample_profile_class.py
