@@ -138,3 +138,90 @@ class MyClass(object):
 
 o = MyClass()
 o.method()
+
+
+'''
+Using the property decorator to define a managed attribute.
+NOTE: the class has to apparently explicitly inherit from object!
+Otherwise it doesn't work!
+'''
+
+class C(object):
+    def __init__(self):
+        self._x = None
+
+    def getx(self):
+        return self._x
+
+    def setx(self, value):
+        print('Setting value')
+        self._x = value + 1
+
+    def delx(self):
+        del self._x
+
+    x = property(getx, setx, delx, "I'm the 'x' property.")
+
+c = C()
+c.x = 1
+print c.x
+
+
+'''
+Using the property decorator with @. @property turns the method into
+a getter, then you can add the setter and the deleter
+'''
+class C2(object):
+    def __init__(self):
+        self._x = None
+
+    @property
+    def x(self):
+        """I'm the 'x' property."""
+        return self._x
+
+    @x.setter
+    def x(self, value):
+        print('Setting value')
+        self._x = value + 1
+
+    @x.deleter
+    def x(self):
+        del self._x
+
+c = C2()
+c.x = 1
+print c.x
+
+
+'''
+Rewriting the lazy_property to make it really understable for myself
+'''
+# we first have a decorator lazy properties that takes a function
+# executes it as the setter only if not hasattr already.
+
+def lazy_property(fn):
+    attr_name = '_lazy_' + fn.__name__
+
+    def _lazy_property(self):
+        if not hasattr(self, attr_name):
+            setattr(self, attr_name, fn(self))
+        return getattr(self, attr_name)
+
+    return _lazy_property
+
+# then we want that decorated function to be the getter of our
+# attribute, so we further decorate it with @property which makes it
+# into the getter
+
+class Test(object):
+
+    @property
+    @lazy_property
+    def a(self):
+        print 'generating "a"'
+        return range(5)
+
+t = Test()
+t.a
+t.a
