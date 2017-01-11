@@ -13,11 +13,12 @@ class PIDCalculator():
         if X.shape[0] != y.shape[0]:
             raise ValueError('The number of samples in the feature and labels'
                              'arrays should match.')
-        self.X = X
-        self.y = y
-        self.Nsamp = y.shape[0]
+        self.X        = X
+        self.y        = y
+        self.Nsamp    = y.shape[0]
         self.Nneurons = X.shape[1]
-        self.labels = list(set(y))
+        self.labels   = list(set(y))
+        self.Nlabels  = len(self.labels)
         print('Initialisation successful.')
 
     @lazy_property
@@ -51,6 +52,16 @@ class PIDCalculator():
     def spec_info_sub_(self):
         spec_info_sub_ = spec_info_full(self.labels, self.joint_sub_)
         return spec_info_sub_
+
+    @lazy_property
+    def spec_info_uni_(self):
+        spec_info_uni_ = []
+        sv = self.spec_info_var_
+        ss = self.spec_info_sub_
+        for i in range(self.Nneurons):
+            spec_info_i = [[sv[j][i], ss[j][i]] for j in range(self.Nlabels)]
+            spec_info_uni_.append(spec_info_i)
+        return spec_info_uni_
 
     @lazy_property
     def X_mar_(self):
@@ -87,9 +98,20 @@ class PIDCalculator():
         return self.syn
 
     def unique(self):
-        #uni = []
-        #mi_var_[i] - Imin(self.y_mar_, self.spec_info_sub_)
-        pass
+        uni = []
+        for i in range(self.Nneurons):
+            unique = self.mi_var_[i] - Imin(self.y_mar_, self.spec_info_uni_[i])
+            uni.append(unique)
+        self.uni = uni
+        return self.uni
+
+    # def unique(self):
+    #     uni = []
+    #     for i in range(self.Nneurons):
+    #         unique = self.mi_var_[i] - Imin(self.y_mar_, self.spec_info_sub_)
+    #         uni.append(unique)
+    #     self.uni = uni
+    #     return uni
 
     def surrogate(self):
         ind = np.random.permutation(self.Nsamp)

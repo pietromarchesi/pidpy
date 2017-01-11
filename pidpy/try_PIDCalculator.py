@@ -41,3 +41,95 @@ X = np.array([[0, 0],
 y = np.array([0,1,2])
 
 pidc = PIDCalculator(X,y)
+pidc.synergy()
+pidc.unique()
+pidc.redundancy()
+
+
+from pidpy.PIDCalculator import *
+
+X = np.array([[0, 0],
+              [0, 1],
+              [1, 1],
+              [1, 0]])
+
+y = np.array([0,1,1,2])
+
+pidc = PIDCalculator(X,y)
+pidc.synergy()
+pidc.unique()
+pidc.redundancy()
+
+# example 5 from the experimentalist perspective
+X = np.array([[0, 0],
+              [1, 0],
+              [0, 1],
+              [1, 1]])
+
+y = np.array([0,1,2,3])
+
+pidc = PIDCalculator(X,y)
+print pidc.synergy()
+print pidc.unique()
+print pidc.redundancy()
+
+
+# example 1 from the experimentalist perspective
+X = np.array([[0, 0],
+              [1, 0],
+              [0, 1],
+              [1, 1]])
+
+y = np.array([0,1,1,0])
+
+pidc = PIDCalculator(X,y)
+print pidc.synergy()
+print pidc.unique()
+print pidc.redundancy()
+
+# example 2 from the experimentalist perspective
+X = np.array([[0, 0],
+              [1, 0],
+              [0, 1],
+              [1, 1]])
+
+y = np.array([0,1,0,1])
+
+pidc = PIDCalculator(X,y)
+print pidc.synergy()
+print pidc.unique()
+print pidc.redundancy()
+
+
+# example 3 from the experimentalist perspective
+X = np.array([[0, 0],
+              [1, 0],
+              [0, 1],
+              [1, 1]])
+
+y = np.array([0,0,0,1])
+
+pidc = PIDCalculator(X,y)
+print pidc.synergy()
+print pidc.unique()
+print pidc.redundancy()
+
+
+# example 4 from the experimentalist perspective
+X = np.array([[0, 0],
+              [0, 0],
+              [0, 0],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1]])
+
+y = np.array([0,1,1,0,1,1,1,1,1,1])
+
+pidc = PIDCalculator(X,y)
+print pidc.synergy()
+print pidc.unique()
+print pidc.redundancy()
