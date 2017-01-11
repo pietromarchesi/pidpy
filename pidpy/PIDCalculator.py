@@ -6,6 +6,8 @@ from pidpy.utils import map_array
 class PIDCalculator():
 
     def __init__(self, *args):
+
+        self.verbosity = 1
         if len(args) == 2:
             self.initialise(args[0], args[1])
 
@@ -23,28 +25,21 @@ class PIDCalculator():
 
     @lazy_property
     def joint_var_(self):
-        print('Computing joint probability tables for each '
-              'individual input variable.')
         joint_var_ = joint_var(self.X, self.y)
         return joint_var_
 
     @lazy_property
     def joint_sub_(self):
-        print('Computing joint probability tables for all groups'
-              'of n-1 variables.')
         joint_sub_ = joint_sub(self.X, self.y)
         return joint_sub_
 
     @lazy_property
     def joint_full_(self):
-        print('Computing the full probability table.')
         joint_full_ = joint_probability(self.X, self.y)
         return joint_full_
 
     @lazy_property
     def spec_info_var_(self):
-        print('Computing specific information for each individual'
-              'input variable')
         spec_info_var_ = spec_info_full(self.labels, self.joint_var_)
         return spec_info_var_
 
@@ -87,7 +82,6 @@ class PIDCalculator():
         mi_full_ = compute_mutual_info(self.X_mar_, self.y_mar_,
                                        self.joint_full_)
         return mi_full_
-
 
     def redundancy(self):
         self.red = Imin(self.y_mar_, self.spec_info_var_)
@@ -203,3 +197,20 @@ def compute_mutual_info(X_mar_, y_mar_, joint):
             if abs(joint[i,j]) > 10**(-8):
                 I += joint[i,j] * np.log2(joint[i,j]/ float(X_mar_[i]*y_mar_[j]))
     return I
+
+
+property_message = {
+'one':'Computing joint probability tables for each '
+      'individual input variable.',
+
+'two':'Computing joint probability tables for each '
+      'individual input variable.'
+}
+
+
+if __name__ == '__main__':
+    X = np.random.randint(2,size = [2000,5])
+    y = np.random.randint(4, size = 2000)
+
+    pid = PIDCalculator(X,y)
+    pid.synergy()
