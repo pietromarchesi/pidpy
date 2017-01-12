@@ -2,11 +2,8 @@ import numpy as np
 from pidpy.utils import lazy_property
 from pidpy.utils import group_without_unit
 from pidpy.utils import map_array
-from pidpy.utilsc import _compute_joint_probability, _compute_mutual_info
 
-
-
-class PIDCalculator():
+class PIDCalculatorPP():
 
     def __init__(self, *args):
 
@@ -24,22 +21,21 @@ class PIDCalculator():
         self.Nneurons = X.shape[1]
         self.labels   = list(set(y))
         self.Nlabels  = len(self.labels)
-        self.binary   = isbinary(X)
         print('Initialisation successful.')
 
     @lazy_property
     def joint_var_(self):
-        joint_var_ = joint_var(self.X, self.y, binary = self.binary)
+        joint_var_ = joint_var(self.X, self.y)
         return joint_var_
 
     @lazy_property
     def joint_sub_(self):
-        joint_sub_ = joint_sub(self.X, self.y, binary = self.binary)
+        joint_sub_ = joint_sub(self.X, self.y)
         return joint_sub_
 
     @lazy_property
     def joint_full_(self):
-        joint_full_ = joint_probability(self.X, self.y, binary = self.binary)
+        joint_full_ = joint_probability(self.X, self.y)
         return joint_full_
 
     @lazy_property
@@ -77,13 +73,13 @@ class PIDCalculator():
         mi_var_ = []
         for joint in self.joint_var_:
             x_mar_ = joint.sum(axis = 1)
-            mi = _compute_mutual_info(x_mar_, self.y_mar_, joint)
+            mi = compute_mutual_info(x_mar_, self.y_mar_, joint)
             mi_var_.append(mi)
         return mi_var_
 
     @lazy_property
     def mi_full_(self):
-        mi_full_ = _compute_mutual_info(self.X_mar_, self.y_mar_,
+        mi_full_ = compute_mutual_info(self.X_mar_, self.y_mar_,
                                        self.joint_full_)
         return mi_full_
 
@@ -117,28 +113,42 @@ class PIDCalculator():
         return sur
 
 
-def isbinary(X):
-    return set(X.flatten()) == {0,1}
 
 
-def joint_probability(X, y, binary = True):
+def joint_probability(X, y):
     if X.ndim > 1:
-        Xmap = map_array(X, binary = binary)
+        Xmap = map_array(X)
     else:
         Xmap = X
-    return _compute_joint_probability(Xmap,y)
+    return compute_joint_probability(Xmap,y)
 
-def joint_var(X,y, binary = True):
+
+def compute_joint_probability(X,y):
+
+    nsamp  = y.shape[0]
+    labels = list(set(y))
+    vals   = np.array(sorted(list(set(X))))
+    nvals  = vals.shape[0]
+    joint  = np.zeros([nvals, len(labels)], dtype = int)
+
+    for i in xrange(nsamp):
+        joint[np.where(vals == X[i])[0][0], y[i]] += 1
+
+    return joint / float(y.shape[0])
+
+
+
+def joint_var(X,y):
     joints = []
     for i in range(X.shape[1]):
-        joints.append(joint_probability(X[:,i],y, binary = binary))
+        joints.append(joint_probability(X[:,i],y))
     return joints
 
-def joint_sub(X,y, binary = True):
+def joint_sub(X,y):
     joints = []
     for i in range(X.shape[1]):
         group = group_without_unit(range(X.shape[1]),i)
-        joints.append(joint_probability(X[:,group], y, binary = binary))
+        joints.append(joint_probability(X[:,group], y))
     return joints
 
 def Imin(y_mar_, spec_info):
@@ -185,6 +195,13 @@ def specific_info(label, joint):
     return Ispec
 
 
+def compute_mutual_info(X_mar_, y_mar_, joint):
+    I = 0
+    for i in range(X_mar_.shape[0]):
+        for j in range(y_mar_.shape[0]):
+            if abs(joint[i,j]) > 10**(-8):
+                I += joint[i,j] * np.log2(joint[i,j]/ float(X_mar_[i]*y_mar_[j]))
+    return I
 
 
 property_message = {
@@ -195,3 +212,10 @@ property_message = {
       'individual input variable.'
 }
 
+
+if __name__ == '__main__':
+    X = np.random.randint(2,size = [2000,5])
+    y = np.random.randint(4, size = 2000)
+
+    pid = PIDCalculator(X,y)
+    pid.synergy()

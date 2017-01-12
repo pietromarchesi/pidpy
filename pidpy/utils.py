@@ -1,4 +1,7 @@
 import numpy as np
+import math
+from pidpy.utilsc import _map_binary
+
 
 def map_binary(x):
     # Map vector of binary digits to the integer in binary numeral system.
@@ -41,7 +44,7 @@ def feature_values(X):
 def map_array(X, binary = True):
     # maps X using
     if binary:
-        usemap = map_binary
+        usemap = _map_binary
     else:
         usemap = map_nonbinary
 
