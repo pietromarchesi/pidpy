@@ -133,3 +133,14 @@ pidc = PIDCalculator(X,y)
 print pidc.synergy()
 print pidc.unique()
 print pidc.redundancy()
+
+
+from pidpy.PIDCalculator import *
+
+X = np.random.randint(10,size = [10000,3])
+y = np.random.randint(10,size = 10000)
+
+pid = PIDCalculator(X,y)
+pid.synergy()
+pid.redundancy()
+pid.unique()

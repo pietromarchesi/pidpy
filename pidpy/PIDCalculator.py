@@ -5,7 +5,6 @@ from pidpy.utils import map_array
 from pidpy.utilsc import _compute_joint_probability, _compute_mutual_info
 
 
-
 class PIDCalculator():
 
     def __init__(self, *args):

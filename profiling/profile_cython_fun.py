@@ -3,9 +3,7 @@ import numpy as np
 from pidpy.PIDCalculatorPP import compute_joint_probability
 from pidpy.PIDCalculatorPP import compute_mutual_info
 from pidpy.PIDCalculatorPP import joint_probability
-
-from pidpy._compute_joint_probability import _compute_joint_probability
-from pidpy._compute_mutual_info import _compute_mutual_info
+from pidpy.utilsc import _compute_joint_probability
 
 X = np.random.randint(8,size = 1000)
 y = np.random.randint(10,size = 1000)
