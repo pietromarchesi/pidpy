@@ -7,7 +7,7 @@ from libc.math cimport log2, fabs
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
-def _compute_joint_probability(np.ndarray[np.int64_t, ndim=1] X,
+def _compute_joint_probability_nonbin(np.ndarray[np.int64_t, ndim=1] X,
                                np.ndarray[np.int64_t, ndim=1] y):
 
     cdef int nsamp  = y.shape[0]
@@ -25,6 +25,26 @@ def _compute_joint_probability(np.ndarray[np.int64_t, ndim=1] X,
         joint[ind, y[i]] += 1
 
     return joint / np.float(nsamp)
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def _compute_joint_probability_bin(np.ndarray[np.int64_t, ndim=1] X,
+                                   np.ndarray[np.int64_t, ndim=1] y,
+                                   int nvals):
+
+    cdef int nsamp  = y.shape[0]
+    cdef int nlabels = len(list(set(y)))
+    cdef np.ndarray[np.int64_t, ndim=2] joint
+    joint = np.zeros([nvals, nlabels], dtype = np.int64)
+
+    for i in xrange(nsamp):
+        joint[X[i], y[i]] += 1
+
+    return joint / np.float(nsamp)
+
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -157,5 +177,5 @@ cdef int _map_binary_par(long[:] x, int n) nogil:
     return tot
 
 
-
 #---------------------------------------------------------------------
+

@@ -137,10 +137,32 @@ print pidc.redundancy()
 
 from pidpy.PIDCalculator import *
 
-X = np.random.randint(10,size = [10000,3])
-y = np.random.randint(10,size = 10000)
+X = np.random.randint(2,size = [16000,11])
+y = np.random.randint(10,size = 16000)
 
 pid = PIDCalculator(X,y)
 pid.synergy()
 pid.redundancy()
 pid.unique()
+
+
+#-------------------------------------------------------
+
+import numpy as np
+
+X = np.array([[0, 0],
+              [0, 0],
+              [0, 0],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1]])
+
+y = np.array([0,1,1,0,1,1,1,1,1,1])
+
+from pidpy import PIDCalculator
+pid = PIDCalculator(X,y)
+pid.decomposition(20)

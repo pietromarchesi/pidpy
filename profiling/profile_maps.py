@@ -22,7 +22,7 @@ import time
 
 
 
-X = np.random.randint(2,size = [1000,11])
+X = np.random.randint(2,size = [100000,11])
 mp = map_binary_array(X)
 mc = _map_binary_array(X)
 mpp = _map_binary_array_par(X)

@@ -2,7 +2,9 @@ import numpy as np
 from pidpy.utils import lazy_property
 from pidpy.utils import group_without_unit
 from pidpy.utils import map_array
-from pidpy.utilsc import _compute_joint_probability, _compute_mutual_info
+from pidpy.utilsc import _compute_mutual_info
+from pidpy.utilsc import _compute_joint_probability_bin
+from pidpy.utilsc import _compute_joint_probability_nonbin
 
 
 class PIDCalculator():
@@ -24,6 +26,7 @@ class PIDCalculator():
         self.labels   = list(set(y))
         self.Nlabels  = len(self.labels)
         self.binary   = isbinary(X)
+        self.surrogate_pool = []
         print('Initialisation successful.')
 
     @lazy_property
@@ -68,6 +71,7 @@ class PIDCalculator():
 
     @lazy_property
     def y_mar_(self):
+        # TODO build this without referring to the full joint
         y_mar_ = self.joint_full_.sum(axis=0)
         return y_mar_
 
@@ -86,6 +90,9 @@ class PIDCalculator():
                                        self.joint_full_)
         return mi_full_
 
+    def mutual_info(self):
+        return self.mi_full_
+
     def redundancy(self):
         self.red = Imin(self.y_mar_, self.spec_info_var_)
         return self.red
@@ -102,6 +109,98 @@ class PIDCalculator():
         self.uni = uni
         return self.uni
 
+    def debiased_redundancy(self, n = 50):
+        out = self.debiased('redundancy', n)
+        self.debiased_syn = out
+        return self.debiased_syn
+
+    def debiased_synergy(self, n = 50):
+        out = self.debiased('synergy', n)
+        self.debiased_red = out
+        return self.debiased_red
+
+    def debiased_unique(self, n = 50):
+        out = self.debiased('unique', n)
+        self.debiased_uni = out
+        return self.debiased_uni
+
+    def debiased_mutual_info(self, n = 50):
+        out = self.debiased('mutual_info', n)
+        self.debiased_mi = out
+        return self.debiased_mi
+
+    # def debiased(self,fun, n):
+    #     res = getattr(self, fun)()
+    #     self.make_surrogates(n)
+    #     null = []
+    #     for i in range(n):
+    #         surrogate = self.surrogate_pool[i]
+    #         sval = getattr(surrogate, fun)()
+    #         null.append(sval)
+    #     if len(null) > 0:
+    #         mean = np.mean(null)
+    #     else:
+    #         mean = 0
+    #     std   = np.std(null)
+    #     return (res, mean, std)
+
+    def debiased(self,fun, n):
+        res = getattr(self, fun)()
+        self.make_surrogates(n)
+
+        if fun in ['unique']:
+            col = self.Nneurons
+        else:
+            col = 1
+
+        null = np.zeros([n,col])
+        for i in range(n):
+            surrogate = self.surrogate_pool[i]
+            sval = getattr(surrogate, fun)()
+            null[i,:] = sval
+
+        if null.shape[0] > 0:
+            mean = np.mean(null, axis = 0)
+            std = np.std(null, axis=0)
+
+        else:
+            mean = np.zeros(col, dtype = int)
+            std = np.empty(col)
+            std[:] = np.nan
+
+        if mean.shape[0] == 1:
+            mean = mean[0]
+        else:
+            mean = mean.tolist()
+
+        if std.shape[0] == 1:
+            std = std[0]
+        else:
+            std = std.tolist()
+
+        return (res, mean, std)
+
+    def make_surrogates(self,n = 50):
+        for i in range(n - len(self.surrogate_pool)):
+            self.surrogate_pool.append(self.surrogate())
+
+    def decomposition(self, n = 50):
+
+        syn = self.debiased_synergy(n)
+        red = self.debiased_redundancy(n)
+        uni = self.debiased_unique(n)
+        mi  = self.debiased_mutual_info(n)
+        frac_syn = (syn[0] - syn[1]) / (mi[0] - mi[1])
+        frac_red = (red[0] - red[1]) / (mi[0] - mi[1])
+        frac_uni = (np.sum(uni[0]) - np.sum(uni[1])) / (mi[0] - mi[1])
+
+        return np.round(frac_syn,4), np.round(frac_red,4), np.round(frac_uni,4)
+
+    def surrogate(self):
+        ind = np.random.permutation(self.Nsamp)
+        sur = PIDCalculator(self.X, self.y[ind])
+        return sur
+
     # def unique(self):
     #     uni = []
     #     for i in range(self.Nneurons):
@@ -110,22 +209,27 @@ class PIDCalculator():
     #     self.uni = uni
     #     return uni
 
-    def surrogate(self):
-        ind = np.random.permutation(self.Nsamp)
-        sur = PIDCalculator(self.X, self.y[ind])
-        return sur
-
-
 def isbinary(X):
     return set(X.flatten()) == {0,1}
 
 
 def joint_probability(X, y, binary = True):
+    # TODO _compute_joint_probability_bin can be used
+    # selectively when you don't have too many neurons, otherwise
+    # you are forced to put in memory huge arrays
     if X.ndim > 1:
         Xmap = map_array(X, binary = binary)
     else:
         Xmap = X
-    return _compute_joint_probability(Xmap,y)
+
+    if binary:
+        #nvals = int(''.join(['1' for i in range(10)]), 2)
+        joint = _compute_joint_probability_nonbin(Xmap,y)
+
+    else:
+        joint = _compute_joint_probability_nonbin(Xmap, y)
+
+    return joint
 
 def joint_var(X,y, binary = True):
     joints = []
@@ -185,12 +289,4 @@ def specific_info(label, joint):
 
 
 
-
-property_message = {
-'one':'Computing joint probability tables for each '
-      'individual input variable.',
-
-'two':'Computing joint probability tables for each '
-      'individual input variable.'
-}
 
