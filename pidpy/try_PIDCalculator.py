@@ -166,3 +166,8 @@ y = np.array([0,1,1,0,1,1,1,1,1,1])
 from pidpy import PIDCalculator
 pid = PIDCalculator(X,y)
 pid.decomposition(20)
+
+
+
+
+

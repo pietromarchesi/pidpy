@@ -178,4 +178,25 @@ cdef int _map_binary_par(long[:] x, int n) nogil:
 
 
 #---------------------------------------------------------------------
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+def _compute_specific_info(int label, np.float64_t[:] y_mar_,
+                  np.float64_t[:,:] cond_Xy,
+                  np.float64_t[:,:] cond_yX,
+                  np.float64_t[:,:] joint):
 
+    cdef double Ispec = 0
+    cdef int    n = cond_Xy.shape[0]
+    cdef double mar = y_mar_[label]
+    cdef double c
+    cdef double contrib
+
+    for x in range(n):
+        if mar > 1e-8:
+            c = cond_yX[x, label]
+            if c > 1e-8:
+                contrib = cond_Xy[x, label] * (log2(1.0 / mar)
+                                           - log2(1.0 / c))
+                Ispec += contrib
+    return Ispec
