@@ -23,8 +23,10 @@ In general, a good rule of thumb is to make sure that
 The main class `PIDCalculator` can be instantiated with a feature array `X` of
 shape `(nsamples, nvariables)` and an array of labels `y` of shape `(nsamples,)`.
 
-    from pidpy import PIDCalculator
-    pid = PIDCalculator(X,y)
+```
+from pidpy import PIDCalculator
+pid = PIDCalculator(X,y)
+```
 
 Then the pure synergy, redundancy, and unique terms of the information
 decomposition can be computed, together with the full mutual information (values
