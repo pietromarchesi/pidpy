@@ -62,4 +62,7 @@ synergy, redundancy, unique, mutual = pid.decomposition()
 By default, this function computes debiased values. To avoid the debiasing, pass
 `debiased = False`. Synergy, redundancy, and unique terms are returned by
  default as a percentage of total mutual information. To obtain information
- values in bits, pass `as_percentage = False`.
+ values in bits, pass `as_percentage = False`. Unique information
+  is returned by default as the sum of all the individual unique information
+  contributions of the different variables. To return an array containing
+  the individual contributions, pass `return_total_unique = True`.

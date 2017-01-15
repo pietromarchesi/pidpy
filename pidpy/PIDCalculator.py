@@ -108,6 +108,15 @@ class PIDCalculator():
         self.red = Imin(self.y_mar_, self.spec_info_var_)
         return self.red
 
+    def redundancy_pairs(self):
+        # TODO: implement this
+        # for every pair of vars i,j
+        # spec_info_pair = [self.spec_info_var_[i], self.spec_info_var_[j]]
+        # red_pair = Imin(self.y_mar_, spec_info_pair)
+        # return perhaps the average?
+
+        pass
+
     def synergy(self):
         self.syn = self.mi_full_ - Imax(self.y_mar_, self.spec_info_sub_)
         return self.syn
@@ -197,7 +206,7 @@ class PIDCalculator():
             self.surrogate_pool.append(self.surrogate())
 
     def decomposition(self, debiased = True, as_percentage = True, n = 50,
-                            round = 4):
+                            round = 4, return_individual_unique = False):
         if debiased:
             syn = self.debiased_synergy(n)[0]
             red = self.debiased_redundancy(n)[0]
@@ -213,6 +222,9 @@ class PIDCalculator():
             syn = 100 * syn / mi
             red = 100 * red / mi
             uni = 100 * uni / mi
+
+        if not return_individual_unique:
+            uni = np.sum(uni)
 
         return (np.round(syn,round), np.round(red,round),
                 np.round(uni,round), np.round(mi,round))
