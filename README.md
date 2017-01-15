@@ -23,7 +23,7 @@ In general, a good rule of thumb is to make sure that
 The main class `PIDCalculator` can be instantiated with a feature array `X` of
 shape `(nsamples, nvariables)` and an array of labels `y` of shape `(nsamples,)`.
 
-```
+```python
 from pidpy import PIDCalculator
 pid = PIDCalculator(X,y)
 ```
@@ -32,19 +32,22 @@ Then the pure synergy, redundancy, and unique terms of the information
 decomposition can be computed, together with the full mutual information (values
 given in bits).
 
-    pid.synergy()
-    pid.redundancy()
-    pid.unique()
-    pid.mutual()
+```python
+pid.synergy()
+pid.redundancy()
+pid.unique()
+pid.mutual()
+````
 
 The information values can also be debiased with shuffled surrogates, where
 the parameter `n` specifies the number of surrogates to be used.
 
-    pid.debiased_synergy(n = 50)
-    pid.debiased_redundancy(n = 50)
-    pid.debiased_unique(n = 50
-    pid.debiased_mutual(n = 50)
-
+```python
+pid.debiased_synergy(n = 50)
+pid.debiased_redundancy(n = 50)
+pid.debiased_unique(n = 50
+pid.debiased_mutual(n = 50)
+```
 These methods return a tuple containing the original value debiased by
 subtracting from it the mean of the surrogates, and the standard deviation
 of the surrogates.
@@ -52,7 +55,9 @@ of the surrogates.
 Lastly, the `decomposition` method can be used as a shortcut to get a full
 picture of the partial information decomposition.
 
-    synergy, redundancy, unique, mutual = pid.decomposition()
+```python
+synergy, redundancy, unique, mutual = pid.decomposition()
+````
 
 By default, this function computes debiased values. To avoid the debiasing, pass
 `debiased = False`. Synergy, redundancy, and unique terms are returned by
