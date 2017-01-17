@@ -11,17 +11,37 @@ from pidpy.utilsc import _compute_specific_info
 class PIDCalculator():
 
 
-
     def __init__(self, *args, **kwargs):
 
         self.verbosity = 1
         if len(args) == 2:
             self.initialise(args[0], args[1], **kwargs)
 
-    def initialise(self,X,y, **kwargs):
+    def initialise(self,X,y, safe_labels = False, **kwargs):
+        #TODO: map the labels (whatever they are - not necessarily range(n))
+        # to range n
+
         if X.shape[0] != y.shape[0]:
             raise ValueError('The number of samples in the feature and labels'
                              'arrays should match.')
+
+        attributes = ['verbosity', 'binary']
+        self.__dict__.update((k, v) for k, v in kwargs.iteritems()
+                             if k in attributes)
+
+        if not 'labels' in kwargs:
+            original_labels = list(set(y))
+
+        else: original_labels = kwargs['labels']
+
+        if not safe_labels:
+            if not original_labels == range(len(original_labels)):
+                y = np.array([original_labels.index(lab) for lab in y])
+
+        self.labels = range(len(original_labels))
+        self.original_labels = original_labels
+
+        self.Nlabels  = len(self.labels)
         self.verbosity = 0
         self.X         = X
         self.y         = y
@@ -29,13 +49,7 @@ class PIDCalculator():
         self.Nneurons  = X.shape[1]
         self.surrogate_pool = []
 
-        attributes = ['verbosity', 'binary', 'labels']
-        self.__dict__.update((k, v) for k, v in kwargs.iteritems()
-                             if k in attributes)
 
-        if not hasattr(self, 'labels'):
-            self.labels   = list(set(y))
-        self.Nlabels  = len(self.labels)
 
         if not hasattr(self, 'binary'):
             self.binary = isbinary(X)
@@ -109,13 +123,18 @@ class PIDCalculator():
         return self.red
 
     def redundancy_pairs(self):
-        # TODO: implement this
-        # for every pair of vars i,j
-        # spec_info_pair = [self.spec_info_var_[i], self.spec_info_var_[j]]
-        # red_pair = Imin(self.y_mar_, spec_info_pair)
-        # return perhaps the average?
+        red_pairs = []
+        for i in range(self.Nneurons):
+            for j in range(self.Nneurons):
+                if i != j:
+                    spec_info_pair = [[self.spec_info_var_[n][i],
+                                       self.spec_info_var_[n][j]]
+                                       for n in self.labels]
 
-        pass
+                    red_pair = Imin(self.y_mar_, spec_info_pair)
+                    red_pairs.append(red_pair)
+        self.red_pairs = np.mean(red_pairs)
+        return self.red_pairs
 
     def synergy(self):
         self.syn = self.mi_full_ - Imax(self.y_mar_, self.spec_info_sub_)
@@ -131,13 +150,13 @@ class PIDCalculator():
 
     def debiased_redundancy(self, n = 50):
         out = self.debiased('redundancy', n)
-        self.debiased_syn = out
-        return self.debiased_syn
+        self.debiased_red = out
+        return self.debiased_red
 
     def debiased_synergy(self, n = 50):
         out = self.debiased('synergy', n)
-        self.debiased_red = out
-        return self.debiased_red
+        self.debiased_syn = out
+        return self.debiased_syn
 
     def debiased_unique(self, n = 50):
         out = self.debiased('unique', n)
@@ -154,20 +173,6 @@ class PIDCalculator():
     # TODO: specific info of certain label certain var
     # TODO: the above debiased
 
-    # def debiased(self,fun, n):
-    #     res = getattr(self, fun)()
-    #     self.make_surrogates(n)
-    #     null = []
-    #     for i in range(n):
-    #         surrogate = self.surrogate_pool[i]
-    #         sval = getattr(surrogate, fun)()
-    #         null.append(sval)
-    #     if len(null) > 0:
-    #         mean = np.mean(null)
-    #     else:
-    #         mean = 0
-    #     std   = np.std(null)
-    #     return (res, mean, std)
 
     def debiased(self,fun, n):
         res = getattr(self, fun)()
@@ -183,7 +188,6 @@ class PIDCalculator():
             surrogate = self.surrogate_pool[i]
             sval = getattr(surrogate, fun)()
             null[i,:] = sval
-
         if null.shape[0] > 0:
             mean = np.mean(null, axis = 0)
             std = np.std(null, axis=0)
@@ -195,28 +199,30 @@ class PIDCalculator():
 
         if mean.shape[0] == 1:
             mean = mean[0]
-
         if std.shape[0] == 1:
             std = std[0]
 
         return (res - mean, std)
 
     def make_surrogates(self,n = 50):
+        #print('Generating %s surrogates.' %n)
         for i in range(n - len(self.surrogate_pool)):
             self.surrogate_pool.append(self.surrogate())
 
     def decomposition(self, debiased = True, as_percentage = True, n = 50,
-                            round = 4, return_individual_unique = False):
+                            round = 4, return_individual_unique = False,
+                            return_std_surrogates = False):
         if debiased:
             syn = self.debiased_synergy(n)[0]
             red = self.debiased_redundancy(n)[0]
             uni = self.debiased_unique(n)[0]
             mi  = self.debiased_mutual(n)[0]
+
         else:
-            syn = self.synergy(n)
-            red = self.redundancy(n)
-            uni = self.unique(n)
-            mi  = self.mutual(n)
+            syn = self.synergy()
+            red = self.redundancy()
+            uni = self.unique()
+            mi  = self.mutual()
 
         if as_percentage:
             syn = 100 * syn / mi
@@ -226,14 +232,29 @@ class PIDCalculator():
         if not return_individual_unique:
             uni = np.sum(uni)
 
-        return (np.round(syn,round), np.round(red,round),
+        ret =  (np.round(syn,round), np.round(red,round),
                 np.round(uni,round), np.round(mi,round))
+
+        if return_std_surrogates:
+            std_syn = self.debiased_syn[1]
+            std_red = self.debiased_red[1]
+            std_uni = self.debiased_uni[1]
+            std_mi = self.debiased_mi[1]
+
+            if not return_individual_unique:
+                std_uni = np.mean(std_uni)
+
+            std = (std_syn, std_red, std_uni, std_mi)
+            ret = (ret, std)
+
+        return ret
 
 
     def surrogate(self):
         ind = np.random.permutation(self.Nsamp)
         sur = PIDCalculator(self.X, self.y[ind], verbosity = 1,
-                            binary = self.binary, labels = self.labels)
+                            binary = self.binary, labels = self.labels,
+                            safe_labels=True)
 
         return sur
 

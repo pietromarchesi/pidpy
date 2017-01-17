@@ -61,8 +61,8 @@ def lazy_property(fn):
     @property
     def _lazyprop(self):
         if not hasattr(self, attr_name):
-            if getattr(self, 'verbosity') > 0:
-                print('Computing %s' %fn.__name__)
+            #if getattr(self, 'verbosity') > 0:
+            #    print('Computing %s' %fn.__name__)
             setattr(self, attr_name, fn(self))
         return getattr(self, attr_name)
 

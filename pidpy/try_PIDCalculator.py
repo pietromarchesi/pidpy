@@ -168,6 +168,36 @@ pid = PIDCalculator(X,y)
 pid.decomposition(20)
 
 
+#-------------------------------------------------------
 
+import numpy as np
+from pidpy.PIDCalculator import *
 
+X = np.array([[0, 0],
+              [0, 0],
+              [0, 0],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1],
+              [1, 1]])
 
+y = np.array([0, 1, 1, 0, 1, 1, 1, 1, 1, 1])
+
+pid = PIDCalculator(X, y)
+syn = pid.synergy()
+uni = pid.unique()
+red = pid.redundancy()
+
+np.testing.assert_almost_equal(syn, 0)
+np.testing.assert_array_almost_equal(uni, [0, 0])
+np.testing.assert_almost_equal(red, 0.0323, 4)
+
+synd = pid.debiased_synergy()
+unid = pid.debiased_unique()
+redd = pid.debiased_redundancy(n = 10000)
+
+def a(n = 3):
+    print n

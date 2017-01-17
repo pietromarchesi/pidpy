@@ -35,7 +35,7 @@ def spec_info_full(self, labels, joints):
 
 
 from pidpy import PIDCalculator
-from pidpy.utilsc import _specific_info
+from pidpy.utilsc import _compute_specific_info
 
 X = np.random.randint(2,size = [10000,2])
 y = np.random.randint(5,size = 10000)
@@ -47,7 +47,7 @@ lab = 4
 si = specific_info(lab,joint)
 
 cond_Xy, cond_yX = conditional_probability_from_joint(joint)
-sic = _specific_info(lab, joint.sum(axis = 0),
+sic = _compute_specific_info(lab, joint.sum(axis = 0),
                      cond_Xy, cond_yX, joint)
 
 assert(si == sic)

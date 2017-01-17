@@ -22,6 +22,7 @@ In general, a good rule of thumb is to make sure that
 
 The main class `PIDCalculator` can be instantiated with a feature array `X` of
 shape `(nsamples, nvariables)` and an array of labels `y` of shape `(nsamples,)`.
+As of yet, if there are `n` labels, they need to be the integers `range(n)`.
 
 ```python
 from pidpy import PIDCalculator
