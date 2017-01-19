@@ -201,3 +201,25 @@ redd = pid.debiased_redundancy(n = 10000)
 
 def a(n = 3):
     print n
+
+
+
+import numpy as np
+from pidpy.PIDCalculator import *
+
+X = np.random.randint(2,size = [1000,1])
+y = np.random.randint(2,size = 1000)
+
+pid = PIDCalculator(X,y)
+
+pid._debiased_mutual(n=10)
+pid.mutual(debiased = True, n = 10)
+
+pid._debiased_redundancy(n=10)
+pid.redundancy(debiased = True, n = 10)
+
+pid._debiased_synergy(n=10)
+pid.synergy(debiased = True, n = 10)
+
+pid._debiased_unique(n = 20)
+pid.unique(debiased = True, n = 20)

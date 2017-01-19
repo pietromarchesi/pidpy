@@ -6,9 +6,6 @@ from pidpy import PIDCalculator
 
 class test_ExampleGatesTimme2014(unittest.TestCase):
 
-    # TODO test also that pid.decomposition returns the expected values
-    # TODO add MI from Timme to the tests
-    # TODO list the values at the beginning so you can copypaste the checking part
     def compare_values(self, X, y, test_syn=None, test_red=None,
                              test_uni=None, test_mi=None, test_mi_vars=None,
                              decimal=3):
@@ -229,3 +226,58 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         test_syn     = 1
         self.compare_values(X[:,[0,1]],y,test_syn = test_syn)
+
+    def test_Timme2014_Example4_testLabels(self):
+        # test that label mapping to different integers gives the same
+        # result
+
+        X = np.array([[0, 0],
+                      [0, 0],
+                      [0, 0],
+                      [1, 1],
+                      [1, 1],
+                      [1, 1],
+                      [1, 1],
+                      [1, 1],
+                      [1, 1],
+                      [1, 1]])
+
+        y = np.array([12, 31, 31, 12, 31, 31, 31, 31, 31, 31])
+
+        test_syn = 0
+        test_red = 0.0323
+        test_uni = [0, 0]
+        test_mi = 0.0323
+        test_mi_vars = [0.0323, 0.0323]
+
+        self.compare_values(X, y, test_syn=test_syn,
+                            test_red=test_red,
+                            test_uni=test_uni,
+                            test_mi=test_mi,
+                            test_mi_vars=test_mi_vars, decimal=4)
+
+    def test_Timme2014_Example8_testLabels(self):
+
+        X = np.array([[0, 0, 0],
+                      [1, 0, 0],
+                      [0, 1, 0],
+                      [1, 1, 0],
+                      [0, 0, 1],
+                      [1, 0, 1],
+                      [0, 1, 1],
+                      [1, 1, 1]])
+
+        y = np.array([2, 8, 8, 2, 2, 8, 8, 2])
+
+        test_syn = 0
+        test_mi = 1
+        test_mi_vars = [0, 0, 0]
+
+        self.compare_values(X, y, test_syn=test_syn,
+                            test_red=None,
+                            test_uni=None,
+                            test_mi=test_mi,
+                            test_mi_vars=test_mi_vars, decimal=4)
+
+        test_syn = 1
+        self.compare_values(X[:, [0, 1]], y, test_syn=test_syn)

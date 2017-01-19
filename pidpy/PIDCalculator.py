@@ -39,8 +39,6 @@ class PIDCalculator():
             self.initialise(args[0], args[1], **kwargs)
 
     def initialise(self,X,y, safe_labels = False, **kwargs):
-        #TODO: map the labels (whatever they are - not necessarily range(n))
-        # to range n
 
         if X.shape[0] != y.shape[0]:
             raise ValueError('The number of samples in the feature and labels'
@@ -136,86 +134,89 @@ class PIDCalculator():
                                        self.joint_full_)
         return mi_full_
 
-    def mutual(self, individual = False):
-        if individual:
-            mi = self.mi_var_
+    def mutual(self, debiased = False, n = 50, individual = False):
+        # TODO implement debiased individual mi
+        if debiased:
+            mi = self.debiased('mutual', n)
+            self.mi = mi
+            if individual:
+                raise NotImplementedError
+
         else:
-            mi = self.mi_full_
+            if individual:
+                mi = self.mi_var_
+                self.mi_individual = mi
+            else:
+                mi = self.mi_full_
+                self.mi = mi
         return mi
 
-    def redundancy(self):
-        self.red = Imin(self.y_mar_, self.spec_info_var_)
+
+    def redundancy(self, debiased = False, n = 50):
+        if debiased:
+            self.red = self.debiased('redundancy', n)
+        else:
+            self.red = Imin(self.y_mar_, self.spec_info_var_)
         return self.red
 
-    def redundancy_pairs(self):
-        red_pairs = []
-        for i in range(self.Nneurons):
-            for j in range(self.Nneurons):
-                if i != j:
-                    spec_info_pair = [[self.spec_info_var_[n][i],
-                                       self.spec_info_var_[n][j]]
-                                       for n in self.labels]
 
-                    red_pair = Imin(self.y_mar_, spec_info_pair)
-                    red_pairs.append(red_pair)
-        self.red_pairs = np.mean(red_pairs)
-        return self.red_pairs
-
-    def synergy(self):
+    def synergy(self, debiased = False, n = 50):
         '''
         Compute the pure synergy between the variables of the data array X.
 
-        Returns
-        -------
-        self.syn : float
-        '''
-        self.syn = self.mi_full_ - Imax(self.y_mar_, self.spec_info_sub_)
-        return self.syn
-
-    def unique(self):
-        uni = np.zeros(self.Nneurons)
-        for i in range(self.Nneurons):
-            unique = self.mi_var_[i] - Imin(self.y_mar_, self.spec_info_uni_[i])
-            uni[i] = unique
-        self.uni = uni
-        return self.uni
-
-    def debiased_redundancy(self, n = 50):
-        out = self.debiased('redundancy', n)
-        self.debiased_red = out
-        return self.debiased_red
-
-    def debiased_synergy(self, n = 50):
-        # TODO include into synergy with debiased = True
-        # TODO self.syn is then either just a number or a tuple
-        '''
-        Compute the pure synergy between the variables of the data array X,
-        debiased with shuffled surrogates.
-
         Parameters
         ----------
+        debiased: bool, optional
+            If True, synergy is debiased with shuffled surrogates. Default is
+            False.
+
         n : int, optional
             Number of surrogate data sets to be used for debiasing. Defaults
             to 50.
 
         Returns
         -------
-        debiased_synergy : float
-            Pure synergy of the variables in `X` debiased by subtracting
-            the mean synergy value of the surrogate data sets.
-        standard_deviation : float
-            Standard deviation of the synergy of the surrogate sets.
+        synergy : float
+            Pure synergy of the variables in `X`.
+        standard_deviation : float, optional
+            Standard deviation of the synergy of the surrogate sets, only
+            returned if `debiased = True`.
         '''
+
+        if debiased:
+            self.syn = self.debiased('synergy', n)
+        else:
+            self.syn = self.mi_full_ - Imax(self.y_mar_, self.spec_info_sub_)
+        return self.syn
+
+    def unique(self, debiased = False, n = 50):
+        if debiased:
+            self.uni = self.debiased('unique', n)
+        else:
+            uni = np.zeros(self.Nneurons)
+            for i in range(self.Nneurons):
+                unique = self.mi_var_[i] - Imin(self.y_mar_, self.spec_info_uni_[i])
+                uni[i] = unique
+            self.uni = uni
+        return self.uni
+
+    def _debiased_redundancy(self, n = 50):
+        out =  self.debiased('redundancy', n)
+        self.debiased_red = out
+        return self.debiased_red
+
+    def _debiased_synergy(self, n = 50):
+
         out = self.debiased('synergy', n)
         self.debiased_syn = out
         return self.debiased_syn
 
-    def debiased_unique(self, n = 50):
+    def _debiased_unique(self, n = 50):
         out = self.debiased('unique', n)
         self.debiased_uni = out
         return self.debiased_uni
 
-    def debiased_mutual(self, n = 50):
+    def _debiased_mutual(self, n = 50):
         out = self.debiased('mutual', n)
         self.debiased_mi = out
         return self.debiased_mi
@@ -271,7 +272,7 @@ class PIDCalculator():
     def decomposition(self, debiased = False, as_percentage = False, n = 50,
                       decimal = 8, return_individual_unique = False,
                       return_std_surrogates = False):
-        # TODO as percentage can return nan if mi is zero
+
         if debiased:
             syn = self.debiased_synergy(n)[0]
             red = self.debiased_redundancy(n)[0]
@@ -285,9 +286,13 @@ class PIDCalculator():
             mi  = self.mutual()
 
         if as_percentage:
-            syn = 100 * syn / mi
-            red = 100 * red / mi
-            uni = 100 * uni / mi
+            if mi > 1e-08:
+                syn = 100 * syn / mi
+                red = 100 * red / mi
+                uni = 100 * uni / mi
+            else:
+                syn, red = 0, 0
+                uni = np.zeros_like(uni)
 
         if not return_individual_unique:
             uni = np.sum(uni)
@@ -309,20 +314,19 @@ class PIDCalculator():
 
         return ret
 
+    def redundancy_pairs(self):
+        red_pairs = []
+        for i in range(self.Nneurons):
+            for j in range(self.Nneurons):
+                if i != j:
+                    spec_info_pair = [[self.spec_info_var_[n][i],
+                                       self.spec_info_var_[n][j]]
+                                       for n in self.labels]
 
-
-    # def specific_info(self, label, joint):
-    #     y_mar_ = self.y_mar_
-    #     cond_Xy, cond_yX = conditional_probability_from_joint(joint)
-    #
-    #     Ispec = 0
-    #     for x in xrange(cond_Xy.shape[0]):
-    #         contrib = cond_Xy[x, label] * (np.log2(1.0 / y_mar_[label])
-    #                                        - np.log2(1.0 / cond_yX[x, label]))
-    #         if np.isnan(contrib):
-    #             contrib = 0
-    #         Ispec += contrib
-    #     return Ispec
+                    red_pair = Imin(self.y_mar_, spec_info_pair)
+                    red_pairs.append(red_pair)
+        self.red_pairs = np.mean(red_pairs)
+        return self.red_pairs
 
     def spec_info_full(self, labels, joints):
         spec_info_full_ = []
@@ -344,9 +348,9 @@ class PIDCalculator():
     #     self.uni = uni
     #     return uni
 
+
 def isbinary(X):
     return set(X.flatten()) == {0,1}
-
 
 def joint_probability(X, y, binary = True):
     # TODO _compute_joint_probability_bin can be used
