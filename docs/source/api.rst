@@ -8,6 +8,7 @@ Module Reference
 
 .. automodule:: pidpy.PIDCalculator
 
+
 :class:`PIDCalculator`
 -------------------------------------
 

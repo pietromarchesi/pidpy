@@ -6,6 +6,51 @@ from pidpy import PIDCalculator
 
 class test_ExampleGatesTimme2014(unittest.TestCase):
 
+    # TODO test also that pid.decomposition returns the expected values
+    # TODO add MI from Timme to the tests
+    # TODO list the values at the beginning so you can copypaste the checking part
+    def compare_values(self, X, y, test_syn=None, test_red=None,
+                             test_uni=None, test_mi=None, test_mi_vars=None,
+                             decimal=3):
+
+        pid = PIDCalculator(X, y)
+        syn = pid.synergy()
+        uni = pid.unique()
+        red = pid.redundancy()
+        mi = pid.mutual()
+        mi_vars = pid.mutual(individual=True)
+
+        dec = pid.decomposition(debiased=False, as_percentage=False,
+                                return_individual_unique=True)
+
+        if test_syn is not None:
+            np.testing.assert_almost_equal(syn, test_syn, decimal=decimal,
+                                           err_msg='Synergy mismatch')
+            np.testing.assert_almost_equal(dec[0], test_syn, decimal=decimal,
+                                           err_msg='Synergy [decomposition] mismatch')
+        if test_red is not None:
+            np.testing.assert_almost_equal(red, test_red, decimal=decimal,
+                                           err_msg='Redundancy mismatch')
+            np.testing.assert_almost_equal(dec[1], test_red, decimal=decimal,
+                                           err_msg='Redundancy [decomposition] mismatch')
+        if test_uni is not None:
+            np.testing.assert_array_almost_equal(uni, test_uni, decimal=decimal,
+                                                 err_msg='Unique Info mismatch')
+            np.testing.assert_array_almost_equal(dec[2], test_uni,
+                                                 decimal=decimal,
+                                                 err_msg='Unique [decomposition] mismatch')
+        if test_mi is not None:
+            np.testing.assert_almost_equal(mi, test_mi, decimal=decimal,
+                                           err_msg='Mutual Info (global) mismatch')
+            np.testing.assert_array_almost_equal(dec[3], test_mi,
+                                                 decimal=decimal,
+                                                 err_msg='Mutual [decomposition] mismatch')
+        if test_mi_vars is not None:
+            np.testing.assert_array_almost_equal(mi_vars, test_mi_vars, decimal=decimal,
+                                                 err_msg='Mutual Info (individual) mismatch')
+
+
+
     def test_Timme2014_Example1(self):
         X = np.array([[0, 0],
                       [1, 0],
@@ -14,14 +59,17 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         y = np.array([0, 1, 1, 0])
 
-        pid = PIDCalculator(X, y)
-        syn = pid.synergy()
-        uni = pid.unique()
-        red = pid.redundancy()
+        test_syn     = 1
+        test_red     = 0
+        test_uni     = [0, 0]
+        test_mi      = 1
+        test_mi_vars = [0, 0]
 
-        np.testing.assert_almost_equal(syn, 1)
-        np.testing.assert_array_almost_equal(uni, [0, 0])
-        np.testing.assert_almost_equal(red, 0)
+        self.compare_values(X,y,test_syn = test_syn,
+                                test_red = test_red,
+                                test_uni = test_uni,
+                                test_mi  = test_mi,
+                                test_mi_vars = test_mi_vars)
 
     def test_Timme2014_Example2(self):
         X = np.array([[0, 0],
@@ -31,15 +79,17 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         y = np.array([0, 1, 0, 1])
 
-        pid = PIDCalculator(X, y)
-        syn = pid.synergy()
-        uni = pid.unique()
-        red = pid.redundancy()
+        test_syn     = 0
+        test_red     = 0
+        test_uni     = [1, 0]
+        test_mi      = 1
+        test_mi_vars = [1, 0]
 
-        np.testing.assert_almost_equal(syn, 0)
-        np.testing.assert_array_almost_equal(uni, [1, 0])
-        np.testing.assert_almost_equal(red, 0)
-
+        self.compare_values(X,y,test_syn = test_syn,
+                                test_red = test_red,
+                                test_uni = test_uni,
+                                test_mi  = test_mi,
+                                test_mi_vars = test_mi_vars)
 
     def test_Timme2014_Example3(self):
         X = np.array([[0, 0],
@@ -49,15 +99,18 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         y = np.array([0, 0, 0, 1])
 
-        pid = PIDCalculator(X, y)
-        syn = pid.synergy()
-        uni = pid.unique()
-        red = pid.redundancy()
 
-        np.testing.assert_almost_equal(syn, 0.5)
-        np.testing.assert_array_almost_equal(uni, [0, 0])
-        np.testing.assert_almost_equal(red, 0.311, 3)
+        test_syn     = 0.5
+        test_red     = 0.311
+        test_uni     = [0, 0]
+        test_mi      = 0.811
+        test_mi_vars = [0.311, 0.311]
 
+        self.compare_values(X,y,test_syn = test_syn,
+                                test_red = test_red,
+                                test_uni = test_uni,
+                                test_mi  = test_mi,
+                                test_mi_vars = test_mi_vars)
 
     def test_Timme2014_Example4(self):
         X = np.array([[0, 0],
@@ -73,14 +126,17 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         y = np.array([0,1,1,0,1,1,1,1,1,1])
 
-        pid = PIDCalculator(X, y)
-        syn = pid.synergy()
-        uni = pid.unique()
-        red = pid.redundancy()
+        test_syn     = 0
+        test_red     = 0.0323
+        test_uni     = [0, 0]
+        test_mi      = 0.0323
+        test_mi_vars = [0.0323, 0.0323]
 
-        np.testing.assert_almost_equal(syn, 0)
-        np.testing.assert_array_almost_equal(uni, [0, 0])
-        np.testing.assert_almost_equal(red, 0.0323, 4)
+        self.compare_values(X,y,test_syn = test_syn,
+                                test_red = test_red,
+                                test_uni = test_uni,
+                                test_mi  = test_mi,
+                                test_mi_vars = test_mi_vars, decimal = 4)
 
     def test_Timme2014_Example5(self):
         X = np.array([[0, 0],
@@ -90,14 +146,17 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         y = np.array([0, 1, 2, 3])
 
-        pid = PIDCalculator(X, y)
-        syn = pid.synergy()
-        uni = pid.unique()
-        red = pid.redundancy()
+        test_syn     = 1
+        test_red     = 1
+        test_uni     = [0, 0]
+        test_mi      = 2
+        test_mi_vars = [1, 1]
 
-        np.testing.assert_almost_equal(syn, 1)
-        np.testing.assert_array_almost_equal(uni, [0, 0])
-        np.testing.assert_almost_equal(red, 1)
+        self.compare_values(X,y,test_syn = test_syn,
+                                test_red = test_red,
+                                test_uni = test_uni,
+                                test_mi  = test_mi,
+                                test_mi_vars = test_mi_vars, decimal = 4)
 
     def test_Timme2014_Example6(self):
 
@@ -106,14 +165,17 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         y = np.array([0, 0])
 
-        pid = PIDCalculator(X, y)
-        syn = pid.synergy()
-        uni = pid.unique()
-        red = pid.redundancy()
+        test_syn     = 0
+        test_red     = 0
+        test_uni     = [0, 0]
+        test_mi      = 0
+        test_mi_vars = [0, 0]
 
-        np.testing.assert_almost_equal(syn, 0)
-        np.testing.assert_array_almost_equal(uni, [0, 0])
-        np.testing.assert_almost_equal(red, 0)
+        self.compare_values(X,y,test_syn = test_syn,
+                                test_red = test_red,
+                                test_uni = test_uni,
+                                test_mi  = test_mi,
+                                test_mi_vars = test_mi_vars, decimal = 7)
 
     def test_Timme2014_Example7(self):
 
@@ -128,13 +190,18 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         y = np.array([0, 1, 1, 0, 1, 0, 0, 1])
 
-        pid = PIDCalculator(X, y)
-        syn = pid.synergy()
-        np.testing.assert_almost_equal(syn, 1)
+        test_syn     = 1
+        test_mi      = 1
+        test_mi_vars = [0, 0, 0]
 
-        pid = PIDCalculator(X[:,[0,1]],y)
-        syn = pid.synergy()
-        np.testing.assert_almost_equal(syn, 0)
+        self.compare_values(X,y,test_syn = test_syn,
+                                test_red = None,
+                                test_uni = None,
+                                test_mi  = test_mi,
+                                test_mi_vars = test_mi_vars, decimal = 4)
+
+        test_syn     = 0
+        self.compare_values(X[:,[0,1]],y,test_syn = test_syn)
 
 
     def test_Timme2014_Example8(self):
@@ -150,149 +217,15 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
 
         y = np.array([0, 1, 1, 0, 0, 1, 1, 0])
 
-        pid = PIDCalculator(X, y)
-        syn = pid.synergy()
-        np.testing.assert_almost_equal(syn, 0)
+        test_syn     = 0
+        test_mi      = 1
+        test_mi_vars = [0, 0, 0]
 
-        pid = PIDCalculator(X[:,[0,1]],y)
-        syn = pid.synergy()
-        np.testing.assert_almost_equal(syn, 1)
+        self.compare_values(X,y,test_syn = test_syn,
+                                test_red = None,
+                                test_uni = None,
+                                test_mi  = test_mi,
+                                test_mi_vars = test_mi_vars, decimal = 4)
 
-#
-# from pidpy.PIDCalculator import *
-#
-# X = np.array([[0, 0],
-#               [0, 1],
-#               [1, 1],
-#               [1, 0]])
-#
-# y = np.array([0,1,1,2])
-#
-# pidc = PIDCalculator(X,y)
-# pidc.synergy()
-# pidc.unique()
-# pidc.redundancy()
-#
-# # example 5 from the experimentalist perspective
-# X = np.array([[0, 0],
-#               [1, 0],
-#               [0, 1],
-#               [1, 1]])
-#
-# y = np.array([0,1,2,3])
-#
-# pidc = PIDCalculator(X,y)
-# print pidc.synergy()
-# print pidc.unique()
-# print pidc.redundancy()
-#
-#
-# # example 1 from the experimentalist perspective
-# X = np.array([[0, 0],
-#               [1, 0],
-#               [0, 1],
-#               [1, 1]])
-#
-# y = np.array([0,1,1,0])
-#
-# pidc = PIDCalculator(X,y)
-# print pidc.synergy()
-# print pidc.unique()
-# print pidc.redundancy()
-#
-# # example 2 from the experimentalist perspective
-# X = np.array([[0, 0],
-#               [1, 0],
-#               [0, 1],
-#               [1, 1]])
-#
-# y = np.array([0,1,0,1])
-#
-# pidc = PIDCalculator(X,y)
-# print pidc.synergy()
-# print pidc.unique()
-# print pidc.redundancy()
-#
-#
-# # example 3 from the experimentalist perspective
-# X = np.array([[0, 0],
-#               [1, 0],
-#               [0, 1],
-#               [1, 1]])
-#
-# y = np.array([0,0,0,1])
-#
-# pidc = PIDCalculator(X,y)
-# print pidc.synergy()
-# print pidc.unique()
-# print pidc.redundancy()
-#
-#
-# # example 4 from the experimentalist perspective
-# X = np.array([[0, 0],
-#               [0, 0],
-#               [0, 0],
-#               [1, 1],
-#               [1, 1],
-#               [1, 1],
-#               [1, 1],
-#               [1, 1],
-#               [1, 1],
-#               [1, 1]])
-#
-# y = np.array([0,1,1,0,1,1,1,1,1,1])
-#
-# pidc = PIDCalculator(X,y)
-# print pidc.synergy()
-# print pidc.unique()
-# print pidc.redundancy()
-#
-# class test_NAME(unittest.TestCase):
-#
-#     def setUp(self):
-#         print('setting up!')
-#
-#     def test_feature1(self):
-#         print('testing feature 1!')
-#
-#     def test_feature2(self):
-#         print('testing feature 2!')
-#
-#     def test_fail(self):
-#         self.assertEqual(3,1)
-#
-#     def tearDown(self):
-#         print('we are done here!')
-#
-#
-#
-# class test_MutualSpecificInformation
-# X = np.array([[0, 1],
-#               [0, 1],
-#               [0, 1],
-#               [1, 0],
-#               [1, 0],
-#               [1, 0],
-#               [1, 1],
-#               [1, 1],
-#               [1, 1]])
-#
-# y = np.array([0,1,0,2,2,2,3,2,3])
-#
-# joint = joint_probability(X,y)
-# conditional_probability_from_joint(joint)
-#
-# pidc = PIDCalculator(X,y)
-#
-# np.testing.assert_array_equal(pidc.joint_var_[0], pidc.joint_sub_[1])
-# np.testing.assert_array_equal(pidc.joint_var_[1], pidc.joint_sub_[0])
-#
-# sv = pidc.spec_info_var_
-# mi = pidc.mi_var_
-# mifromspec1 = np.sum([pidc.y_mar_[i] * sv[i][0] for i in range(len(sv))])
-# mifromspec2 = np.sum([pidc.y_mar_[i] * sv[i][1] for i in range(len(sv))])
-#
-# np.testing.assert_almost_equal(mifromspec1, mi[0])
-# np.testing.assert_almost_equal(mifromspec2, mi[1])
-#
-# pidc.synergy()
+        test_syn     = 1
+        self.compare_values(X[:,[0,1]],y,test_syn = test_syn)

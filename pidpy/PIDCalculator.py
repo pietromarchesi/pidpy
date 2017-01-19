@@ -10,6 +10,27 @@ from pidpy.utilsc import _compute_specific_info
 
 class PIDCalculator():
 
+    '''
+    Calculator class for the partial information decomposition of mutual
+    information.
+
+    Parameters
+    ----------
+    X : 2D ndarray, shape (n_samples, n_features)
+        Data from which to obtain the information decomposition.
+    y : 1D ndarray, shape (n_samples, )
+        Array containing the labels of the dependent variable.
+
+
+    Notes
+    -----
+    Description...
+
+    References
+    ----------
+
+    '''
+
 
     def __init__(self, *args, **kwargs):
 
@@ -25,7 +46,7 @@ class PIDCalculator():
             raise ValueError('The number of samples in the feature and labels'
                              'arrays should match.')
 
-        attributes = ['verbosity', 'binary']
+        attributes = ['binary']
         self.__dict__.update((k, v) for k, v in kwargs.iteritems()
                              if k in attributes)
 
@@ -115,8 +136,12 @@ class PIDCalculator():
                                        self.joint_full_)
         return mi_full_
 
-    def mutual(self):
-        return self.mi_full_
+    def mutual(self, individual = False):
+        if individual:
+            mi = self.mi_var_
+        else:
+            mi = self.mi_full_
+        return mi
 
     def redundancy(self):
         self.red = Imin(self.y_mar_, self.spec_info_var_)
@@ -137,6 +162,13 @@ class PIDCalculator():
         return self.red_pairs
 
     def synergy(self):
+        '''
+        Compute the pure synergy between the variables of the data array X.
+
+        Returns
+        -------
+        self.syn : float
+        '''
         self.syn = self.mi_full_ - Imax(self.y_mar_, self.spec_info_sub_)
         return self.syn
 
@@ -154,6 +186,26 @@ class PIDCalculator():
         return self.debiased_red
 
     def debiased_synergy(self, n = 50):
+        # TODO include into synergy with debiased = True
+        # TODO self.syn is then either just a number or a tuple
+        '''
+        Compute the pure synergy between the variables of the data array X,
+        debiased with shuffled surrogates.
+
+        Parameters
+        ----------
+        n : int, optional
+            Number of surrogate data sets to be used for debiasing. Defaults
+            to 50.
+
+        Returns
+        -------
+        debiased_synergy : float
+            Pure synergy of the variables in `X` debiased by subtracting
+            the mean synergy value of the surrogate data sets.
+        standard_deviation : float
+            Standard deviation of the synergy of the surrogate sets.
+        '''
         out = self.debiased('synergy', n)
         self.debiased_syn = out
         return self.debiased_syn
@@ -202,16 +254,24 @@ class PIDCalculator():
         if std.shape[0] == 1:
             std = std[0]
 
-        return (res - mean, std)
+        return res - mean, std
 
     def make_surrogates(self,n = 50):
         #print('Generating %s surrogates.' %n)
         for i in range(n - len(self.surrogate_pool)):
             self.surrogate_pool.append(self.surrogate())
 
-    def decomposition(self, debiased = True, as_percentage = True, n = 50,
-                            round = 4, return_individual_unique = False,
-                            return_std_surrogates = False):
+    def surrogate(self):
+        ind = np.random.permutation(self.Nsamp)
+        sur = PIDCalculator(self.X, self.y[ind], verbosity = 1,
+                            binary = self.binary, labels = self.labels,
+                            safe_labels=True)
+        return sur
+
+    def decomposition(self, debiased = False, as_percentage = False, n = 50,
+                      decimal = 8, return_individual_unique = False,
+                      return_std_surrogates = False):
+        # TODO as percentage can return nan if mi is zero
         if debiased:
             syn = self.debiased_synergy(n)[0]
             red = self.debiased_redundancy(n)[0]
@@ -232,8 +292,8 @@ class PIDCalculator():
         if not return_individual_unique:
             uni = np.sum(uni)
 
-        ret =  (np.round(syn,round), np.round(red,round),
-                np.round(uni,round), np.round(mi,round))
+        ret =  (np.round(syn, decimal), np.round(red, decimal),
+                np.round(uni, decimal), np.round(mi, decimal))
 
         if return_std_surrogates:
             std_syn = self.debiased_syn[1]
@@ -250,13 +310,6 @@ class PIDCalculator():
         return ret
 
 
-    def surrogate(self):
-        ind = np.random.permutation(self.Nsamp)
-        sur = PIDCalculator(self.X, self.y[ind], verbosity = 1,
-                            binary = self.binary, labels = self.labels,
-                            safe_labels=True)
-
-        return sur
 
     # def specific_info(self, label, joint):
     #     y_mar_ = self.y_mar_
