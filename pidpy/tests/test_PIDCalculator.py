@@ -14,7 +14,13 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
         syn = pid.synergy()
         uni = pid.unique()
         red = pid.redundancy()
-        mi = pid.mutual()
+        mi  = pid.mutual()
+
+        syn_d, syn_std = pid.synergy(debiased = True, n = 0)
+        uni_d, uni_std = pid.unique(debiased = True, n = 0)
+        red_d, red_std = pid.redundancy(debiased = True, n = 0)
+        mi_d, mi_std   = pid.mutual(debiased = True, n = 0)
+
         mi_vars = pid.mutual(individual=True)
 
         dec = pid.decomposition(debiased=False, as_percentage=False,
@@ -25,23 +31,33 @@ class test_ExampleGatesTimme2014(unittest.TestCase):
                                            err_msg='Synergy mismatch')
             np.testing.assert_almost_equal(dec[0], test_syn, decimal=decimal,
                                            err_msg='Synergy [decomposition] mismatch')
+            np.testing.assert_almost_equal(syn_d, test_syn, decimal=decimal,
+                                           err_msg='Synergy [debiased] mismatch')
         if test_red is not None:
             np.testing.assert_almost_equal(red, test_red, decimal=decimal,
                                            err_msg='Redundancy mismatch')
             np.testing.assert_almost_equal(dec[1], test_red, decimal=decimal,
                                            err_msg='Redundancy [decomposition] mismatch')
+            np.testing.assert_almost_equal(red_d, test_red, decimal=decimal,
+                                           err_msg='Redundancy [debiased] mismatch')
         if test_uni is not None:
             np.testing.assert_array_almost_equal(uni, test_uni, decimal=decimal,
                                                  err_msg='Unique Info mismatch')
             np.testing.assert_array_almost_equal(dec[2], test_uni,
                                                  decimal=decimal,
                                                  err_msg='Unique [decomposition] mismatch')
+            np.testing.assert_array_almost_equal(uni_d, test_uni,
+                                                 decimal=decimal,
+                                                 err_msg='Unique [debiased] mismatch')
         if test_mi is not None:
             np.testing.assert_almost_equal(mi, test_mi, decimal=decimal,
                                            err_msg='Mutual Info (global) mismatch')
             np.testing.assert_array_almost_equal(dec[3], test_mi,
                                                  decimal=decimal,
                                                  err_msg='Mutual [decomposition] mismatch')
+            np.testing.assert_array_almost_equal(mi_d, test_mi,
+                                                 decimal=decimal,
+                                                 err_msg='Mutual [debiased] mismatch')
         if test_mi_vars is not None:
             np.testing.assert_array_almost_equal(mi_vars, test_mi_vars, decimal=decimal,
                                                  err_msg='Mutual Info (individual) mismatch')
