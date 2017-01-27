@@ -8,6 +8,7 @@
 ############
 docs/build/
 pidpy/generators.py
+pidpy/try_PIDCalculator.py
 parallel_example.py
 profiling.py
 sample_profile_class.py

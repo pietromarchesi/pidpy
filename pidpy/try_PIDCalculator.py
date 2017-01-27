@@ -223,3 +223,62 @@ pid.synergy(debiased = True, n = 10)
 
 pid._debiased_unique(n = 20)
 pid.unique(debiased = True, n = 20)
+
+
+
+X = np.array([[0, 0],
+              [1, 0],
+              [0, 1],
+              [1, 1]])
+
+y = np.array([0, 1, 1, 0])
+X = np.tile(X, (500, 1))
+y = np.tile(y, (1,500))
+y = y[0,:]
+
+pid = PIDCalculator(X,y)
+pid.synergy(debiased=True,n = 100)
+pid.synergy()
+
+test_syn = 1
+test_red = 0
+test_uni = [0, 0]
+test_mi = 1
+test_mi_vars = [0, 0]
+
+compare_values(X, y, test_syn=test_syn,
+               test_red=test_red,
+               test_uni=test_uni,
+               test_mi=test_mi,
+               test_mi_vars=test_mi_vars)
+
+
+import numpy as np
+from pidpy.PIDCalculator import *
+
+X = np.array([[0, 0],
+              [1, 0],
+              [0, 1],
+              [1, 1]])
+
+y = np.array([0, 1, 1, 0])
+
+
+X = np.random.randint(2, size = [1000,4])
+y = np.random.randint(5, size = 1000)
+pid = PIDCalculator(X,y)
+pid.mutual(debiased=False, n = 100, individual = True, decimals = 4)
+
+pid.mutual(debiased=True, n = 100, individual = True, decimals = 4)
+
+
+pid.mutual(decimals = 4)
+pid.mutual(individual=True,decimals = 4)
+
+
+
+X = np.array([[0, 0.0],
+              [1, 0],
+              [0, 1],
+              [1, 1]])
+issubclass(X.dtype.type, np.integer)

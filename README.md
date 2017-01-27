@@ -44,10 +44,10 @@ The information values can also be debiased with shuffled surrogates, where
 the parameter `n` specifies the number of surrogates to be used.
 
 ```python
-pid.debiased_synergy(n = 50)
-pid.debiased_redundancy(n = 50)
-pid.debiased_unique(n = 50
-pid.debiased_mutual(n = 50)
+pid.synergy(debiased = True, n = 50)
+pid.redundancy(debiased = True, n = 50)
+pid.unique(debiased = True, n = 50
+pid.mutual(debiased = True, n = 50)
 ```
 These methods return a tuple containing the original value debiased by
 subtracting from it the mean of the surrogates, and the standard deviation
@@ -59,11 +59,3 @@ picture of the partial information decomposition.
 ```python
 synergy, redundancy, unique, mutual = pid.decomposition()
 ````
-
-By default, this function computes debiased values. To avoid the debiasing, pass
-`debiased = False`. Synergy, redundancy, and unique terms are returned by
- default as a percentage of total mutual information. To obtain information
- values in bits, pass `as_percentage = False`. Unique information
-  is returned by default as the sum of all the individual unique information
-  contributions of the different variables. To return an array containing
-  the individual contributions, pass `return_total_unique = True`.

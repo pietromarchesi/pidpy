@@ -23,6 +23,8 @@ def compare_values(X, y, test_syn=None, test_red=None,
     mi_d, mi_std = pid.mutual(debiased=True, n=0)
 
     mi_vars = pid.mutual(individual=True)
+    mi_vars2 = pid.mutual(debiased = True, individual=True, n = 0)[0]
+
 
     dec = pid.decomposition(debiased=False, as_percentage=False,
                             return_individual_unique=True)
@@ -63,6 +65,11 @@ def compare_values(X, y, test_syn=None, test_red=None,
         np.testing.assert_array_almost_equal(mi_vars, test_mi_vars,
                                              decimal=decimal,
                                              err_msg='Mutual Info (individual) mismatch')
+
+        np.testing.assert_array_almost_equal(mi_vars2, test_mi_vars,
+                                             decimal=decimal,
+                                             err_msg='Mutual Info (individual) mismatch')
+
 
 class test_ExampleGatesTimme2014(unittest.TestCase):
     '''
@@ -380,6 +387,11 @@ class test_ExampleGatesInce2016(unittest.TestCase):
                                 decimal  = 4)
 
 
+    class test_DebiasedMeasures(unittest.TestCase):
 
+        # TODO: tile the arrays from the examples and test debiased measures
+        # maybe introducing some noise?
+        # make sure that if you run debiased on repetitions, you get
+        # very close to the true value
 
 
