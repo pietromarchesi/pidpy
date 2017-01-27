@@ -14,3 +14,4 @@ Module Reference
 
 .. autoclass:: pidpy.PIDCalculator.PIDCalculator
    :members:
+

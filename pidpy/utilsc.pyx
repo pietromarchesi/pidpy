@@ -9,7 +9,10 @@ from libc.math cimport log2, fabs
 @cython.cdivision(True)
 def _compute_joint_probability_nonbin(np.ndarray[np.int64_t, ndim=1] X,
                                np.ndarray[np.int64_t, ndim=1] y):
-
+    '''
+    The joint probability table is built only with values which actually
+    appear in X.
+    '''
     cdef int nsamp  = y.shape[0]
     cdef int nlabels = len(list(set(y)))
     cdef np.ndarray[np.int64_t, ndim=1] vals
@@ -33,7 +36,10 @@ def _compute_joint_probability_nonbin(np.ndarray[np.int64_t, ndim=1] X,
 def _compute_joint_probability_bin(np.ndarray[np.int64_t, ndim=1] X,
                                    np.ndarray[np.int64_t, ndim=1] y,
                                    int nvals):
-
+    '''
+    The joint probability table is set up with all possible values
+    of X, which can make things a lot faster if you have few variables. 
+    '''
     cdef int nsamp  = y.shape[0]
     cdef int nlabels = len(list(set(y)))
     cdef np.ndarray[np.int64_t, ndim=2] joint
@@ -154,6 +160,7 @@ def _map_binary_array_par(long[:,:] X):
     return np.array(Xmapout,dtype = 'int64')
 
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef int[:] _map_binary_array_par_inner(long[:,:] X, int[:] Xmap, int N, int n):
@@ -161,6 +168,8 @@ cdef int[:] _map_binary_array_par_inner(long[:,:] X, int[:] Xmap, int N, int n):
      for i in prange(N, schedule=dynamic, nogil=True):
           Xmap[i] = _map_binary_par(X[i,:], n)
      return Xmap
+
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)

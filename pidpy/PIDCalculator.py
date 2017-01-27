@@ -1,4 +1,6 @@
 import numpy as np
+from joblib import Parallel, delayed
+
 from pidpy.utils import lazy_property
 from pidpy.utils import group_without_unit
 from pidpy.utils import map_array
@@ -18,8 +20,35 @@ class PIDCalculator():
     ----------
     X : 2D ndarray, shape (n_samples, n_features)
         Data from which to obtain the information decomposition.
+
     y : 1D ndarray, shape (n_samples, )
         Array containing the labels of the dependent variable.
+
+    **kwargs
+        safe_labels : bool, optional (default = False)
+            If `True`, it is assumed that the `n` labels the compose `y`
+            are the integers in `range(n)`. If `False`, the above is checked
+            and if it is found to be false, `y` is mapped so that the label
+            values are `range(n)`. This is necessary because the label values
+            are used for indexing in the construction of probability tables.
+            `safe_labels` should be kept to `False`, setting to `True` is only
+            done internally to speed up the initialization of the PID calculators
+            used to generate surrogate data.
+
+        binary : bool, optional
+            Directly specifies whether `X` is a binary array. If not provided,
+            the PID calculator runs a check on the whole array `X` to verify
+            if it is binary. This parameter is used internally and passed
+            to the surrogates to avoid multiple checks being run on the same
+            array.
+            If the data is binary and has a relatively low number of variables,
+            the probability tables can be generated with a faster routine.
+
+        labels : list, optional
+            Allows to directly specify the labels in `y`. If not provided,
+            labels are extracted from the `y` array using `set`. This parameter
+            is used internally to speed up the instantiation of surrogate
+            calculators.
 
 
     Notes
@@ -36,35 +65,7 @@ class PIDCalculator():
     ----------
     '''
 
-
-    def __init__(self, *args, **kwargs):
-
-        self.verbosity = 1
-        if len(args) == 2:
-            self._initialise(args[0], args[1], **kwargs)
-
-    def _initialise(self, X, y, safe_labels = False, **kwargs):
-        '''
-        Initialise the PID calculator.
-
-        Parameters
-        ----------
-        X : 2D ndarray, shape (n_samples, n_features)
-            Data from which to obtain the information decomposition.
-
-        y : 1D ndarray, shape (n_samples, )
-            Array containing the labels of the dependent variable.
-
-        safe_labels : bool, optional (default = False)
-            If `True`, it is assumed that the `n` labels the compose `y`
-            are the integers in `range(n)`. If `False`, the above is checked
-            and if it is found to be false, `y` is mapped so that the label
-            values are `range(n)`. This is necessary because the label values
-            are used for indexing in the construction of probability tables.
-            `safe_labels` should be kept to `False`, setting to `True` is only
-            done internally to speed up the initialization of the PID calculators
-            used to generate surrogate data.
-        '''
+    def __init__(self, X, y, **kwargs):
 
         if X.shape[0] != y.shape[0]:
             raise ValueError('The number of samples in the feature and labels'
@@ -73,9 +74,20 @@ class PIDCalculator():
         if not issubclass(X.dtype.type, np.integer):
             X = X.astype('int')
 
-        attributes = ['binary']
-        self.__dict__.update((k, v) for k, v in kwargs.iteritems()
-                             if k in attributes)
+        if not 'binary' in kwargs:
+            self.binary = isbinary(X)
+        else:
+            self.binary = kwargs['binary']
+
+
+        if not 'n_jobs' in kwargs:
+            self.n_jobs = -1
+        else:
+            self.n_jobs = kwargs['n_jobs']
+
+        if not self.binary and X.shape[1] > 3:
+            raise NotImplementedError('Decomposition of non-binary data with more'
+                                    'than 3 variables is not supported yet.')
 
         # labels are passed by the main calculator as kwargs to the calculators
         # used for debiasing, to avoid recomputing the set of labels
@@ -84,7 +96,7 @@ class PIDCalculator():
         else:
             original_labels = kwargs['labels']
 
-        if not safe_labels:
+        if not ('safe_labels' in kwargs and kwargs['safe_labels']):
             if not original_labels == range(len(original_labels)):
                 y = np.array([original_labels.index(lab) for lab in y])
 
@@ -99,8 +111,7 @@ class PIDCalculator():
         self.Nneurons  = X.shape[1]
         self.surrogate_pool = []
 
-        if not hasattr(self, 'binary'):
-            self.binary = isbinary(X)
+
 
     @lazy_property
     def joint_var_(self):
@@ -455,11 +466,21 @@ class PIDCalculator():
         else:
             col = 1
 
-        null = np.zeros([n,col])
-        for i in range(n):
-            surrogate = self.surrogate_pool[i]
-            sval = getattr(surrogate, fun)(**kwargs)
-            null[i,:] = sval
+        # for n_jobs = 1, the original implementation is still a bit faster
+        # probably because it does not have to make the additional function
+        # call to _get_surrogate_val
+        if self.n_jobs == 1:
+            null = np.zeros([n,col])
+            for i in range(n):
+                surrogate = self.surrogate_pool[i]
+                sval = getattr(surrogate, fun)(**kwargs)
+                null[i,:] = sval
+        else:
+            null_list = Parallel(n_jobs=self.n_jobs)(delayed
+                        (_get_surrogate_val)(self.surrogate_pool[i], fun, **kwargs)
+                        for i in range(n))
+            null = np.array(null_list,ndmin = 2).T
+
         if null.shape[0] > 0:
             mean = np.mean(null, axis = 0)
             std = np.std(null, axis=0)
@@ -529,6 +550,9 @@ class PIDCalculator():
     #     return uni
 
 
+def _get_surrogate_val(surrogate, fun, **kwargs):
+    return getattr(surrogate, fun)(**kwargs)
+
 def isbinary(X):
     return set(X.flatten()) == {0,1}
 
@@ -539,13 +563,14 @@ def joint_probability(X, y, binary = True):
 
     if X.ndim > 1:
         Xmap = map_array(X, binary = binary)
+        N = X.shape[1]
     else:
         Xmap = X
+        N = 1
 
-    if binary:
-        #nvals = int(''.join(['1' for i in range(10)]), 2)
-        joint = _compute_joint_probability_nonbin(Xmap,y)
-
+    if binary and N < 12:
+        nvals = 2 ** N
+        joint = _compute_joint_probability_bin(Xmap,y,nvals)
     else:
         joint = _compute_joint_probability_nonbin(Xmap, y)
 

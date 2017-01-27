@@ -255,18 +255,61 @@ compare_values(X, y, test_syn=test_syn,
 
 import numpy as np
 from pidpy.PIDCalculator import *
+bina, nonbina = [],[]
+for n in [2,4,6,8,10,12,14]:
+    np.random.seed(seed = 123)
+    X = np.random.randint(2, size = [1000,n])
+    y = np.random.randint(5, size = 1000)
 
-X = np.array([[0, 0],
-              [1, 0],
-              [0, 1],
-              [1, 1]])
+    import time
+    t0 = time.time()
+    for i in range(10):
+        pid = PIDCalculator(X, y)
+        pid.binary = False
+        pid.synergy()
+    t1 = time.time()
+    nonbina.append(t1-t0)
 
-y = np.array([0, 1, 1, 0])
+    import time
+    t0 = time.time()
+    for i in range(10):
+        pid = PIDCalculator(X, y)
+        pid.binary = True
+        pid.synergy()
+    t1 = time.time()
+    bina.append(t1-t0)
 
 
-X = np.random.randint(2, size = [1000,4])
-y = np.random.randint(5, size = 1000)
-pid = PIDCalculator(X,y)
+import matplotlib.pyplot as plt
+plt.plot(bina)
+plt.plot(nonbina)
+plt.xticks(range(7),[2,4,6,8,10,12,14])
+
+
+def r(surr):
+
+
+r(sur)
+
+pid.surrogate_pool[13].joint_full_
+
+
+sur2 = pid.surrogate_pool[13]
+s2 = sur.joint_full_
+
+
+s = pid.surrogate_pool[13].joint_full_
+
+n = 10
+null_list = Parallel(n_jobs=2)(delayed
+                               (pid._get_surrogate_val(i, 'mutual'))(i)
+                               for i in range(n))
+
+def fun(a,b):
+    return a
+Parallel(n_jobs=2)(delayed(fun)(i ** 2,2) for i in range(10))
+
+
 pid.mutual(debiased=False, n = 100, individual = True, decimals = 4)
 
 pid.mutual(debiased=True, n = 100, individual = True, decimals = 4)
@@ -282,3 +325,9 @@ X = np.array([[0, 0.0],
               [0, 1],
               [1, 1]])
 issubclass(X.dtype.type, np.integer)
+
+
+
+for k in user_attributes.iterkeys():
+    if k in kwargs:
+        self.__dict__.update(k, kwargs[k])

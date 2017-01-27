@@ -6,6 +6,7 @@ from pidpy.utils import map_binary_array_original
 from pidpy.utilsc import _map_binary, _map_binary1, _map_binary2
 from pidpy.utilsc import _map_binary_array
 from pidpy.utilsc import _map_binary_array_par
+from pidpy.utilsc import _map_binary_array_par_stat
 
 
 if False:
@@ -22,7 +23,7 @@ import time
 
 
 
-X = np.random.randint(2,size = [100000,11])
+X = np.random.randint(2,size = [1000000,11])
 mp = map_binary_array(X)
 mc = _map_binary_array(X)
 mpp = _map_binary_array_par(X)
@@ -33,4 +34,6 @@ np.testing.assert_array_equal(mp,mpp)
 %timeit map_binary_array(X)
 %timeit _map_binary_array(X)
 %timeit _map_binary_array_par(X)
+%timeit _map_binary_array_par_stat(X)
 
+# TODO _map_binary_array make sure it's the same only not parallel
