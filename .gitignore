@@ -13,6 +13,7 @@ pidpy/parallel_prova.py
 pidpy/*.html
 pidpy/generators.py
 pidpy/try_PIDCalculator.py
+pidpy/tests/spec_info_tests.py
 profiling/*
 
 *.png
