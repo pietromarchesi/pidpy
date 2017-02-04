@@ -2,10 +2,40 @@ pidpy
 =====
 
 pidpy is a Python package for partial information decomposition.
-It computes
+
 
 Installation
 ------------
+After cloning or downloading the repository, do
+
+```
+cd pidpy
+```
+
+Then you can install normally with
+
+```
+$ python setup.py install
+```
+
+or
+
+```
+$ pip install .
+```
+
+However, it is recommended to install with the _develop_ option, with
+
+```
+$ python setup.py develop
+```
+
+or
+
+```
+$ pip install -e .
+```
+
 
 Tests
 -----
@@ -18,11 +48,10 @@ pidpy supports any number of feature variables with binary values
 variables, support is limited to triplets.
 
 In general, a good rule of thumb is to make sure that
-`nvariables < log2(nsamples / (3*nlabels))`.
+`n_variables < log2(n_samples / (3*n_labels))`.
 
 The main class `PIDCalculator` can be instantiated with a feature array `X` of
-shape `(nsamples, nvariables)` and an array of labels `y` of shape `(nsamples,)`.
-As of yet, if there are `n` labels, they need to be the integers `range(n)`.
+shape `(n_samples, n_variables)` and an array of labels `y` of shape `(n_samples,)`.
 
 ```python
 from pidpy import PIDCalculator
@@ -59,3 +88,24 @@ picture of the partial information decomposition.
 ```python
 synergy, redundancy, unique, mutual = pid.decomposition()
 ````
+For more detailed information, see the documentation.
+
+Building the documentation
+-----------
+To build the docs, you need to have Sphinx installed, together with the
+ `numpydoc` Sphinx extension (`pip install numpydoc`).
+To build the documentation in html format:
+
+```
+cd docs
+make html
+```
+
+Or
+
+```
+sphinx-build -b html ./source ./build/html
+```
+
+Then in `build/html` you can open `api.html` to begin reading
+the documentation.

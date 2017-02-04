@@ -1,9 +1,12 @@
 import numpy as np
 from pidpy.utils import lazy_property
-from pidpy.utils import group_without_unit
+from pidpy.utils import _group_without_unit
 
 class PIDCalculatorPP():
 
+    '''
+    Original pure Python implementation of the PIDCalculator class.
+    '''
     def __init__(self, *args):
 
         self.verbosity = 1
@@ -146,7 +149,7 @@ def joint_var(X,y):
 def joint_sub(X,y):
     joints = []
     for i in range(X.shape[1]):
-        group = group_without_unit(range(X.shape[1]),i)
+        group = _group_without_unit(range(X.shape[1]), i)
         joints.append(joint_probability(X[:,group], y))
     return joints
 
@@ -248,18 +251,3 @@ def map_nonbinary(x):
         x[i + 1] = cantor_pairing_function(x[i], x[i + 1])
     return x[i + 1]
 
-property_message = {
-'one':'Computing joint probability tables for each '
-      'individual input variable.',
-
-'two':'Computing joint probability tables for each '
-      'individual input variable.'
-}
-
-
-if __name__ == '__main__':
-    X = np.random.randint(2,size = [2000,5])
-    y = np.random.randint(4, size = 2000)
-
-    pid = PIDCalculator(X,y)
-    pid.synergy()

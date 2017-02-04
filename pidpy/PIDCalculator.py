@@ -2,11 +2,13 @@ import numpy as np
 from joblib import Parallel, delayed
 
 from pidpy.utils import lazy_property
-from pidpy.utils import group_without_unit
-from pidpy.utils import map_array
+from pidpy.utils import _get_surrogate_val
+from pidpy.utils import _isbinary
+from pidpy.utils import _joint_probability, _conditional_probability_from_joint
+from pidpy.utils import _joint_sub, _joint_var
+from pidpy.utils import _Imin, _Imax
+
 from pidpy.utilsc import _compute_mutual_info
-from pidpy.utilsc import _compute_joint_probability_bin
-from pidpy.utilsc import _compute_joint_probability_nonbin
 from pidpy.utilsc import _compute_specific_info
 
 
@@ -50,10 +52,17 @@ class PIDCalculator():
             is used internally to speed up the instantiation of surrogate
             calculators.
 
+        n_jobs : int, optional
+            The generation of surrogate data sets and the computation of
+            their information values can be executed in parallel, with n_jobs
+            specifying the number of parallel jobs to be launched through
+            the Joblib library. There is a known issue with large arrays,
+            for which parallelization is not possible. In that case a
+            execution is continued with 1 sequential job.
+
 
     Notes
     -----
-    Description of the method.
     Partial information decomposition of binary data (`X` contains only
     `0` and `1`, no restrictions on `y`) is supported for an arbitrary
     number of variables (although ensure that the number of data points is
@@ -75,7 +84,7 @@ class PIDCalculator():
             X = X.astype('int')
 
         if not 'binary' in kwargs:
-            self.binary = isbinary(X)
+            self.binary = _isbinary(X)
         else:
             self.binary = kwargs['binary']
 
@@ -112,34 +121,52 @@ class PIDCalculator():
         self.surrogate_pool = []
 
 
-
     @lazy_property
     def joint_var_(self):
-        joint_var_ = joint_var(self.X, self.y, binary = self.binary)
+        '''
+        Joint probability tables of every individual variable of `X` with `y`.
+        '''
+        joint_var_ = _joint_var(self.X, self.y, binary = self.binary)
         return joint_var_
 
     @lazy_property
     def joint_sub_(self):
-        joint_sub_ = joint_sub(self.X, self.y, binary = self.binary)
+        '''
+        Joint probability tables of all groups of `n-1` variables of `X`.
+        '''
+        joint_sub_ = _joint_sub(self.X, self.y, binary = self.binary)
         return joint_sub_
 
     @lazy_property
     def joint_full_(self):
-        joint_full_ = joint_probability(self.X, self.y, binary = self.binary)
+        '''
+        Full joint probability of `X` and `y`.
+        '''
+        joint_full_ = _joint_probability(self.X, self.y, binary = self.binary)
         return joint_full_
 
     @lazy_property
     def spec_info_var_(self):
-        spec_info_var_ = self._spec_info_full(self.labels, self.joint_var_)
+        '''
+        Specific information for every label for all individual variables of `X`.
+        '''
+        spec_info_var_ = self._spec_info(self.labels, self.joint_var_)
         return spec_info_var_
 
     @lazy_property
     def spec_info_sub_(self):
-        spec_info_sub_ = self._spec_info_full(self.labels, self.joint_sub_)
+        '''
+        Specific information for every label for all groups of `n-1` variables
+        of `X`.
+        '''
+        spec_info_sub_ = self._spec_info(self.labels, self.joint_sub_)
         return spec_info_sub_
 
     @lazy_property
     def spec_info_uni_(self):
+        '''
+        Rearranged specific information values to compute unique information.
+        '''
         spec_info_uni_ = []
         sv = self.spec_info_var_
         ss = self.spec_info_sub_
@@ -150,17 +177,26 @@ class PIDCalculator():
 
     @lazy_property
     def X_mar_(self):
+        '''
+        Marginal probability of `X`.
+        '''
         X_mar_ = self.joint_full_.sum(axis=1)
         return X_mar_
 
     @lazy_property
     def y_mar_(self):
+        '''
+        Marginal probability of `y`.
+        '''
         # TODO build this without referring to the full joint
         y_mar_ = self.joint_full_.sum(axis=0)
         return y_mar_
 
     @lazy_property
     def mi_var_(self):
+        '''
+        Mutual information between each individual variables of `X` and `y`.
+        '''
         mi_var_ = []
         for joint in self.joint_var_:
             x_mar_ = joint.sum(axis = 1)
@@ -170,6 +206,9 @@ class PIDCalculator():
 
     @lazy_property
     def mi_full_(self):
+        '''
+        Mutual of information between `X` and `y`.
+        '''
         mi_full_ = _compute_mutual_info(self.X_mar_, self.y_mar_,
                                        self.joint_full_)
         return mi_full_
@@ -200,7 +239,7 @@ class PIDCalculator():
         if debiased:
             self.syn = self._debiased('synergy', n)
         else:
-            self.syn = self.mi_full_ - Imax(self.y_mar_, self.spec_info_sub_)
+            self.syn = self.mi_full_ - _Imax(self.y_mar_, self.spec_info_sub_)
         return self.syn
 
     def redundancy(self, debiased = False, n = 50):
@@ -229,7 +268,7 @@ class PIDCalculator():
         if debiased:
             self.red = self._debiased('redundancy', n)
         else:
-            self.red = Imin(self.y_mar_, self.spec_info_var_)
+            self.red = _Imin(self.y_mar_, self.spec_info_var_)
         return self.red
 
 
@@ -262,7 +301,7 @@ class PIDCalculator():
         else:
             uni = np.zeros(self.Nneurons)
             for i in range(self.Nneurons):
-                unique = self.mi_var_[i] - Imin(self.y_mar_, self.spec_info_uni_[i])
+                unique = self.mi_var_[i] - _Imin(self.y_mar_, self.spec_info_uni_[i])
                 uni[i] = unique
             self.uni = uni
         return self.uni
@@ -467,19 +506,29 @@ class PIDCalculator():
             col = 1
 
         # for n_jobs = 1, the original implementation is still a bit faster
-        # probably because it does not have to make the additional function
-        # call to _get_surrogate_val
+
+        if self.n_jobs != 1:
+            try:
+                null_list = Parallel(n_jobs=self.n_jobs)(delayed
+                            (_get_surrogate_val)(self.surrogate_pool[i], fun, **kwargs)
+                            for i in range(n))
+                null = np.array(null_list, ndmin=2).T
+
+            # TODO: fix this. Problems occur only with large arrays.
+            except ValueError as err:
+                print("Parallel processing has encountered a "
+                      "problem (the exception is stored in the attribute 'err'.)"
+                      +"\nContinuing execution with n_jobs = 1.")
+                self.err = err
+
+        self.n_jobs = 1
+
         if self.n_jobs == 1:
             null = np.zeros([n,col])
             for i in range(n):
                 surrogate = self.surrogate_pool[i]
                 sval = getattr(surrogate, fun)(**kwargs)
                 null[i,:] = sval
-        else:
-            null_list = Parallel(n_jobs=self.n_jobs)(delayed
-                        (_get_surrogate_val)(self.surrogate_pool[i], fun, **kwargs)
-                        for i in range(n))
-            null = np.array(null_list,ndmin = 2).T
 
         if null.shape[0] > 0:
             mean = np.mean(null, axis = 0)
@@ -498,7 +547,6 @@ class PIDCalculator():
         return res - mean, std
 
     def _make_surrogates(self, n = 50):
-        #print('Generating %s surrogates.' %n)
         for i in range(n - len(self.surrogate_pool)):
             self.surrogate_pool.append(self._surrogate())
 
@@ -509,12 +557,12 @@ class PIDCalculator():
                             safe_labels=True)
         return sur
 
-
-
-    def redundancy_pairs(self):
+    def _redundancy_pairs(self):
         '''
         Experimental function to compute the average redundancy between
-         all the pairs of variables in `X`.
+        all the pairs of variables in `X`. The idea is to characterize a group
+        of variables not only by the pure redundancy between all of them,
+        but also to explore redundancy at lower levels (pairs).
         '''
         red_pairs = []
         for i in range(self.Nneurons):
@@ -524,90 +572,35 @@ class PIDCalculator():
                                        self.spec_info_var_[n][j]]
                                        for n in self.labels]
 
-                    red_pair = Imin(self.y_mar_, spec_info_pair)
+                    red_pair = _Imin(self.y_mar_, spec_info_pair)
                     red_pairs.append(red_pair)
         self.red_pairs = np.mean(red_pairs)
         return self.red_pairs
 
-    def _spec_info_full(self, labels, joints):
+    def _spec_info(self, labels, joints):
         spec_info_full_ = []
         for lab in labels:
             spec_info_lab = []
             for joint in joints:
-                cond_Xy, cond_yX = conditional_probability_from_joint(joint)
+                cond_Xy, cond_yX = _conditional_probability_from_joint(joint)
                 info = _compute_specific_info(lab, self.y_mar_,
                                       cond_Xy, cond_yX, joint)
                 spec_info_lab.append(info)
             spec_info_full_.append(spec_info_lab)
         return spec_info_full_
 
-    # def unique(self):
-    #     uni = []
-    #     for i in range(self.Nneurons):
-    #         unique = self.mi_var_[i] - Imin(self.y_mar_, self.spec_info_sub_)
-    #         uni.append(unique)
-    #     self.uni = uni
-    #     return uni
+    def _lattice(self):
+        """
+        Old experimental function which computes nodes on the
+        redundancy lattice.
+        """
+        uni = []
+        for i in range(self.Nneurons):
+            unique = self.mi_var_[i] - _Imin(self.y_mar_, self.spec_info_sub_)
+            uni.append(unique)
+        self.uni = uni
+        return uni
 
-
-def _get_surrogate_val(surrogate, fun, **kwargs):
-    return getattr(surrogate, fun)(**kwargs)
-
-def isbinary(X):
-    return set(X.flatten()) == {0,1}
-
-def joint_probability(X, y, binary = True):
-    # TODO _compute_joint_probability_bin can be used
-    # selectively when you don't have too many neurons, otherwise
-    # you are forced to put in memory huge arrays
-
-    if X.ndim > 1:
-        Xmap = map_array(X, binary = binary)
-        N = X.shape[1]
-    else:
-        Xmap = X
-        N = 1
-
-    if binary and N < 12:
-        nvals = 2 ** N
-        joint = _compute_joint_probability_bin(Xmap,y,nvals)
-    else:
-        joint = _compute_joint_probability_nonbin(Xmap, y)
-
-    return joint
-
-def joint_var(X,y, binary = True):
-    joints = []
-    for i in range(X.shape[1]):
-        joints.append(joint_probability(X[:,i],y, binary = binary))
-    return joints
-
-def joint_sub(X,y, binary = True):
-    joints = []
-    for i in range(X.shape[1]):
-        group = group_without_unit(range(X.shape[1]),i)
-        joints.append(joint_probability(X[:,group], y, binary = binary))
-    return joints
-
-def Imin(y_mar_, spec_info):
-    Im = 0
-    for i in range(len(y_mar_)):
-        Im += y_mar_[i]*np.min(spec_info[i])
-    return Im
-
-def Imax(y_mar_, spec_info):
-    Im = 0
-    for i in range(len(y_mar_)):
-        Im += y_mar_[i]*np.max(spec_info[i])
-    return Im
-
-def conditional_probability_from_joint(joint):
-    X_mar = joint.sum(axis = 1)
-    y_mar = joint.sum(axis = 0)
-
-    cond_Xy = joint.astype(float) / y_mar[np.newaxis, :]
-    cond_yX = joint.astype(float) / X_mar[:, np.newaxis]
-    return cond_Xy, cond_yX
 
 
 

@@ -13,14 +13,6 @@ def readme():
         return f.read()
 
 
-# ext_1 = Extension(SRC_DIR + ".wrapped",
-#                   [SRC_DIR + "/lib/cfunc.c", SRC_DIR + "/wrapped.pyx"],
-#                   libraries=[],
-#                   include_dirs=[np.get_include()])
-#
-#
-# EXTENSIONS = [ext_1]
-
 setup(name='pidpy',
       version='0.1',
       description='Partial Information Decomposition in Python',
@@ -40,6 +32,7 @@ setup(name='pidpy',
       packages=['pidpy'],
       install_requires=[
           'numpy',
+          'joblib'
       ],
       include_package_data=True,
       zip_safe=False,

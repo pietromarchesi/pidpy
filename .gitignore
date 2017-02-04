@@ -7,13 +7,14 @@
 # My files #
 ############
 docs/build/
+profiling/
+pidpy/PIDER.py
+pidpy/parallel_prova.py
+pidpy/*.html
 pidpy/generators.py
 pidpy/try_PIDCalculator.py
-parallel_example.py
-profiling.py
-sample_profile_class.py
-timing.py
-script_to_profile.py
+profiling/*
+
 *.png
 *.eps
 

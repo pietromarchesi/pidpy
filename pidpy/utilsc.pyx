@@ -4,6 +4,7 @@ cimport cython
 cimport numpy as np
 from libc.math cimport log2, fabs
 
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -38,7 +39,8 @@ def _compute_joint_probability_bin(np.ndarray[np.int64_t, ndim=1] X,
                                    int nvals):
     '''
     The joint probability table is set up with all possible values
-    of X, which can make things a lot faster if you have few variables. 
+    of X (faster, but requires construction of arrays which are too big
+    if X is not binary).
     '''
     cdef int nsamp  = y.shape[0]
     cdef int nlabels = len(list(set(y)))
@@ -57,7 +59,6 @@ def _compute_joint_probability_bin(np.ndarray[np.int64_t, ndim=1] X,
 def _compute_mutual_info(np.ndarray[np.float64_t, ndim=1] X_mar_,
                               np.ndarray[np.float64_t, ndim=1] y_mar_,
                               np.ndarray[np.float64_t, ndim=2] joint):
-
     cdef double I = 0
     cdef int xlen = X_mar_.shape[0]
     cdef int ylen = y_mar_.shape[0]
@@ -69,77 +70,6 @@ def _compute_mutual_info(np.ndarray[np.float64_t, ndim=1] X_mar_,
     return I
 
 
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def _map_binary(np.ndarray[np.int64_t, ndim=1] x):
-
-    cdef int tot = 0
-    cdef int i
-    cdef int n = x.shape[0]
-
-    for i in range(n):
-        if x[i]:
-            tot += 1<<i
-    return tot
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def _map_binary1(np.ndarray[np.int64_t, ndim=1, mode = 'c'] x):
-
-    cdef int tot = 0
-    cdef int i
-    cdef int n = x.shape[0]
-
-    for i in range(n):
-        if x[i]:
-            tot += 1<<i
-    return tot
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def _map_binary2(np.ndarray[np.int64_t, ndim=1, mode = 'c'] x):
-
-    cdef int tot = 0
-    cdef int i
-    cdef int n = x.shape[0]
-    cdef int p = 1
-    for i in range(n):
-        if x[i]:
-            tot += p
-        p = p << 1
-    return tot
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-cdef int _map_binary_cdef(np.int64_t[:] x):
-
-    cdef int tot = 0
-    cdef int i
-    cdef int n = x.size
-
-    for i in range(n):
-        if x[i]:
-            tot += 1<<i
-    return tot
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-def _map_binary_array(np.int64_t[:,:] X):
-
-    cdef int nsamp = X.shape[0]
-    cdef np.ndarray[np.int64_t, ndim=1] Xmap
-    Xmap = np.zeros(nsamp, dtype = np.int64)
-    cdef int i
-
-    for i in range(nsamp):
-        x = X[i,:]
-        Xmap[i] = _map_binary_cdef(x)
-
-    return Xmap
-
-#---------------------------------------------------------------------
 from cython.parallel import prange
 from cython.view cimport array as cvarray
 from cpython cimport array as c_array
@@ -170,7 +100,6 @@ cdef int[:] _map_binary_array_par_inner(long[:,:] X, int[:] Xmap, int N, int n):
      return Xmap
 
 
-
 @cython.boundscheck(False)
 @cython.wraparound(False)
 cdef int _map_binary_par(long[:] x, int n) nogil:
@@ -186,7 +115,6 @@ cdef int _map_binary_par(long[:] x, int n) nogil:
     return tot
 
 
-#---------------------------------------------------------------------
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -209,3 +137,50 @@ def _compute_specific_info(int label, np.float64_t[:] y_mar_,
                                            - log2(1.0 / c))
                 Ispec += contrib
     return Ispec
+
+
+
+#---------------------------------------------------------------------
+# The functions below are not in use, kept for profiling comparison.
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def _map_binary(np.ndarray[np.int64_t, ndim=1] x):
+
+    cdef int tot = 0
+    cdef int i
+    cdef int n = x.shape[0]
+
+    for i in range(n):
+        if x[i]:
+            tot += 1<<i
+    return tot
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef int _map_binary_cdef(np.int64_t[:] x):
+
+    cdef int tot = 0
+    cdef int i
+    cdef int n = x.size
+
+    for i in range(n):
+        if x[i]:
+            tot += 1<<i
+    return tot
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def _map_binary_array(np.int64_t[:,:] X):
+
+    cdef int nsamp = X.shape[0]
+    cdef np.ndarray[np.int64_t, ndim=1] Xmap
+    Xmap = np.zeros(nsamp, dtype = np.int64)
+    cdef int i
+
+    for i in range(nsamp):
+        x = X[i,:]
+        Xmap[i] = _map_binary_cdef(x)
+
+    return Xmap
