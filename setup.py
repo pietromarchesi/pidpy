@@ -32,7 +32,8 @@ setup(name='pidpy',
       packages=['pidpy'],
       install_requires=[
           'numpy',
-          'joblib'
+          'joblib',
+          'pymorton'
       ],
       include_package_data=True,
       zip_safe=False,

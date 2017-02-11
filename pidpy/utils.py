@@ -1,6 +1,12 @@
 import numpy as np
 import math
-import pymorton
+import warnings
+
+try:
+    import pymorton
+except ImportError:
+    warnings.warn("Module pymorton is not available, functionality"
+                  "is limited to binary data.")
 
 from pidpy.utilsc import _map_binary_array_par
 from pidpy.utilsc import _compute_joint_probability_bin
