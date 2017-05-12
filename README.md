@@ -2,6 +2,10 @@ pidpy
 =====
 
 pidpy is a Python package for partial information decomposition.
+Specifically, it can be used to compute the pure terms of the decomposition
+for an arbitrary number of source variables using the original proposal
+of Williams & Beer [1].
+
 
 
 Installation
@@ -88,7 +92,9 @@ picture of the partial information decomposition.
 ```python
 synergy, redundancy, unique, mutual = pid.decomposition()
 ````
-For more detailed information, see the documentation.
+For more detailed information, see the documentation. An option to return
+the surrogate values directly and compute a significance estimate of the
+information value will be added hopefully in the near future.
 
 Building the documentation
 -----------
@@ -109,3 +115,7 @@ sphinx-build -b html ./source ./build/html
 
 Then in `build/html` you can open `api.html` to begin reading
 the documentation.
+
+[1] Williams, P. L., & Beer, R. D. (2010).
+Nonnegative decomposition of multivariate information.
+arXiv preprint arXiv:1004.2515.
