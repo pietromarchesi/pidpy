@@ -11,6 +11,13 @@ from pidpy.utils import _Imin, _Imax
 from pidpy.utilsc import _compute_mutual_info
 from pidpy.utilsc import _compute_specific_info
 
+# NOTE: division by zero can occur when generating the marginal distributions
+# if not all possible patterns of the sources are realized (cond_yX ends up
+# having nans). A check is inserted in pidpy.utilsc._compute_specific_info,
+# so that contributions to the specific information are only calculated on
+# non-nan terms.
+
+np.seterr(divide='ignore', invalid='ignore')
 
 class PIDCalculator():
 
@@ -152,6 +159,7 @@ class PIDCalculator():
         '''
         spec_info_var_ = self._spec_info(self.labels, self.joint_var_)
         return spec_info_var_
+
 
     @lazy_property
     def spec_info_sub_(self):
@@ -469,6 +477,17 @@ class PIDCalculator():
             decomposition = (decomposition, std_decomposition)
 
         return decomposition
+
+    def specific_information(self):
+        '''
+        User method to obtain the specific information.
+
+        Returns
+        -------
+        spec_info: 2D ndarray, shape (n_variables, n_labels)
+        '''
+
+        return np.array(self.spec_info_var_).T
 
     def _debiased_synergy(self, n = 50):
         out = self._debiased('synergy', n)
