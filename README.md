@@ -92,9 +92,18 @@ picture of the partial information decomposition.
 ```python
 synergy, redundancy, unique, mutual = pid.decomposition()
 ````
-For more detailed information, see the documentation. An option to return
-the surrogate values directly and compute a significance estimate of the
-information value will be added hopefully in the near future.
+For more detailed information, see the documentation. To obtain a p-value
+for every information theoretic quantity (computed as the fraction of
+surrogates for which the information theoretic quantity is higher
+than the observed one), you can do:
+
+```python
+decomposition, p_values = pid.decomposition(debiased = True, n = 50,
+                                            return_std_surrogates = False,
+                                            test_significance = True)
+````
+In this case, an additional tuple is returned containing a p-value
+for every term.
 
 Building the documentation
 -----------

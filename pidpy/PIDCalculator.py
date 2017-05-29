@@ -19,6 +19,8 @@ from pidpy.utilsc import _compute_specific_info
 
 np.seterr(divide='ignore', invalid='ignore')
 
+#TODO: add option to test significane in the functions for the individual terms
+
 class PIDCalculator():
 
     '''
@@ -376,7 +378,7 @@ class PIDCalculator():
 
     def decomposition(self, debiased = False, as_percentage = False, n = 50,
                       decimal = 8, return_individual_unique = False,
-                      return_std_surrogates = False):
+                      return_std_surrogates = False, test_significance=False):
         '''
         Decompose the mutual information of `X` into the pure synergy,
         redunandcy, and unique terms.
@@ -405,9 +407,13 @@ class PIDCalculator():
             terms.
 
         return_std_surrogates : bool, optional (default = False)
-            If true, the standard deviation associated with the surrogate data
+            If True, the standard deviation associated with the surrogate data
             sets for each information theoretic measure is returned.
 
+        test_significance : bool, optional (default = False)
+            If True, a p-value is computed for every term of the decomposition
+            as the fraction of surrogates for which the value of the term is
+            higher than the observed one (unshuffled).
 
         Returns
         -------
@@ -421,6 +427,11 @@ class PIDCalculator():
             two tuples, namely
             `decomposition = ((synergy, redundancy, unique, mutual),
             (std_synergy, std_redundancy, std_unique, std_mutual))`
+            If `test_significance = True`, a tuple
+            `(p_val_syn, p_val_red, p_val_uni, p_val_mi)` is also returned, so
+            that the output is either `decomposition = (information_terms,
+            standard_deviations, p_values)`, or only `decomposition =
+            (information_terms, p_values)`.
 
         Examples
         --------
@@ -435,10 +446,10 @@ class PIDCalculator():
         '''
 
         if debiased:
-            syn, std_syn = self.synergy(debiased = True, n = n)
-            red, std_red = self.redundancy(debiased = True, n = n)
-            uni, std_uni = self.unique(debiased = True, n = n)
-            mi,  std_mi  = self.mutual(debiased = True, n = n)
+            syn, std_syn, p_syn = self.synergy(debiased = True, n = n)
+            red, std_red, p_red = self.redundancy(debiased = True, n = n)
+            uni, std_uni, p_uni = self.unique(debiased = True, n = n)
+            mi,  std_mi, p_mi  = self.mutual(debiased = True, n = n)
 
         else:
             syn = self.synergy(debiased = False)
@@ -475,6 +486,12 @@ class PIDCalculator():
             std_decomposition = (std_syn, std_red, std_uni, std_mi)
 
             decomposition = (decomposition, std_decomposition)
+
+        if test_significance:
+            if return_std_surrogates:
+                decomposition = decomposition + ((p_syn, p_red, p_uni, p_mi),)
+            if not return_std_surrogates:
+                decomposition = (decomposition, (p_syn, p_red, p_uni, p_mi))
 
         return decomposition
 
@@ -514,7 +531,7 @@ class PIDCalculator():
     # TODO: specific info of certain label certain var
     # TODO: the above debiased
 
-    def _debiased(self, fun, n, **kwargs):
+    def _debiased(self, fun, n, test_significance=True, **kwargs):
         res = getattr(self, fun)(**kwargs)
         self._make_surrogates(n)
 
@@ -553,6 +570,9 @@ class PIDCalculator():
             mean = np.mean(null, axis = 0)
             std = np.std(null, axis=0)
 
+            if test_significance:
+                    p_val = self._p_value(res, null)
+
         else:
             mean = np.zeros(col, dtype = int)
             std = np.empty(col)
@@ -563,11 +583,13 @@ class PIDCalculator():
         if std.shape[0] == 1:
             std = std[0]
 
-        return res - mean, std
+        return res - mean, std, p_val
+
 
     def _make_surrogates(self, n = 50):
         for i in range(n - len(self.surrogate_pool)):
             self.surrogate_pool.append(self._surrogate())
+
 
     def _surrogate(self):
         ind = np.random.permutation(self.Nsamp)
@@ -575,6 +597,16 @@ class PIDCalculator():
                             binary = self.binary, labels = self.labels,
                             safe_labels=True)
         return sur
+
+
+    def _p_value(self, obs, null):
+        '''
+        Compute the p-value of an information theoretic (IT) quantity as the
+        fraction of surrogates for which the IT quantity is larger than the
+        observed value (corresponding to the unshuffled data).
+        '''
+        return np.sum(null > obs) / null.shape[0]
+
 
     def _redundancy_pairs(self):
         '''
