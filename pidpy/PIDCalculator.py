@@ -69,6 +69,13 @@ class PIDCalculator():
             for which parallelization is not possible. In that case a
             execution is continued with 1 sequential job.
 
+        alpha: float, optional
+            If the `decomposition` method is asked to return the sum of the
+            unique information while `test_significance` is set to true,
+            the sum is of the unique information of individual sources is
+            computed only for sources which are significant with significance
+            level `alpha`. Default level is `0.01`.
+
 
     Notes
     -----
@@ -102,6 +109,11 @@ class PIDCalculator():
             self.n_jobs = -1
         else:
             self.n_jobs = kwargs['n_jobs']
+
+        if not 'alpha' in kwargs:
+            self.alpha = 0.05
+        else:
+            self.alpha = kwargs['alpha']
 
         if not self.binary and X.shape[1] > 3:
             raise NotImplementedError('Decomposition of non-binary data with more'
@@ -468,7 +480,10 @@ class PIDCalculator():
                 uni = np.zeros_like(uni)
 
         if not return_individual_unique:
-            uni = np.sum(uni)
+            if test_significance:
+                uni = np.sum(uni[p_uni < self.alpha])
+            else:
+                uni = np.sum(uni)
 
         decomposition =  (np.round(syn, decimal), np.round(red, decimal),
                 np.round(uni, decimal), np.round(mi, decimal))
@@ -605,7 +620,10 @@ class PIDCalculator():
         fraction of surrogates for which the IT quantity is larger than the
         observed value (corresponding to the unshuffled data).
         '''
-        return np.sum(null > obs) / null.shape[0]
+        pval =  np.sum(null > obs, axis=0) / null.shape[0]
+        if pval.shape[0] == 1:
+            pval = pval[0]
+        return pval
 
 
     def _redundancy_pairs(self):

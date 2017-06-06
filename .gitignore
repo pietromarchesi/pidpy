@@ -16,6 +16,7 @@ pidpy/try_PIDCalculator.py
 pidpy/PIDCalculatorPP.py
 pidpy/tests/spec_info_tests.py
 pidpy/setting_attributes.py
+pidpy/tests/check_significance.py
 profiling/*
 
 *.png
