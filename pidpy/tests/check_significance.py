@@ -9,4 +9,4 @@ pid = PIDCalculator(X, y)
 pid.decomposition(debiased=True, return_std_surrogates=True, test_significance=True)
 
 
-pid.decomposition(debiased=True, return_std_surrogates=False, test_significance=True)
+dec,pv = pid.decomposition(debiased=True, return_individual_unique=False, test_significance=True)

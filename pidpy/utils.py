@@ -34,9 +34,15 @@ def _map_nonbinary_array(X):
     Xmap = np.zeros(X.shape[0], dtype = int)
     for i in range(X.shape[0]):
         if X.shape[1] == 3:
-            Xmap[i] = pymorton.interleave(X[i,0], X[i,1], X[i,2])
+            try:
+                Xmap[i] = pymorton.interleave(X[i,0], X[i,1], X[i,2])
+            except ValueError:
+                Xmap[i] = pymorton.interleave(int(X[i,0]), int(X[i,1]), int(X[i,2]))
         if X.shape[1] == 2:
-            Xmap[i] = pymorton.interleave(X[i,0], X[i,1])
+            try:
+                Xmap[i] = pymorton.interleave(X[i,0], X[i,1])
+            except ValueError:
+                Xmap[i] = pymorton.interleave(int(X[i, 0]), int(X[i, 1]))
     return Xmap
 
 

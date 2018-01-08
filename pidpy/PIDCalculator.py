@@ -482,6 +482,7 @@ class PIDCalculator():
         if not return_individual_unique:
             if test_significance:
                 uni = np.sum(uni[p_uni < self.alpha])
+                p_uni = None
             else:
                 uni = np.sum(uni)
 
