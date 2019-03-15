@@ -31,18 +31,28 @@ def _map_nonbinary_array(X):
     integers using Morton encoding of every row of the input
     array. Supports only up to three variables.
     '''
+    # TODO: this is fine but every time the value error is raised pymorton prints
+    # stuff, which we don't want.
+    # Xmap = np.zeros(X.shape[0], dtype = int)
+    # for i in range(X.shape[0]):
+    #     if X.shape[1] == 3:
+    #         try:
+    #             Xmap[i] = pymorton.interleave(X[i,0], X[i,1], X[i,2])
+    #         except ValueError:
+    #             Xmap[i] = pymorton.interleave(int(X[i,0]), int(X[i,1]), int(X[i,2]))
+    #     if X.shape[1] == 2:
+    #         try:
+    #             Xmap[i] = pymorton.interleave(X[i,0], X[i,1])
+    #         except ValueError:
+    #             Xmap[i] = pymorton.interleave(int(X[i, 0]), int(X[i, 1]))
+    # return Xmap
+
     Xmap = np.zeros(X.shape[0], dtype = int)
     for i in range(X.shape[0]):
         if X.shape[1] == 3:
-            try:
-                Xmap[i] = pymorton.interleave(X[i,0], X[i,1], X[i,2])
-            except ValueError:
-                Xmap[i] = pymorton.interleave(int(X[i,0]), int(X[i,1]), int(X[i,2]))
+            Xmap[i] = pymorton.interleave(int(X[i,0]), int(X[i,1]), int(X[i,2]))
         if X.shape[1] == 2:
-            try:
-                Xmap[i] = pymorton.interleave(X[i,0], X[i,1])
-            except ValueError:
-                Xmap[i] = pymorton.interleave(int(X[i, 0]), int(X[i, 1]))
+            Xmap[i] = pymorton.interleave(int(X[i, 0]), int(X[i, 1]))
     return Xmap
 
 
