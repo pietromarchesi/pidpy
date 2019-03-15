@@ -599,8 +599,10 @@ class PIDCalculator():
         if std.shape[0] == 1:
             std = std[0]
 
-        return res - mean, std, p_val
-
+        if (null.shape[0] > 0) and test_significance:
+            return res - mean, std, p_val
+        else:
+            return res - mean, std
 
     def _make_surrogates(self, n = 50):
         for i in range(n - len(self.surrogate_pool)):
